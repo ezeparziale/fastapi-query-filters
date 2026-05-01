@@ -1,0 +1,57 @@
+[project]
+name = "fastapi-query-filters"
+version = "0.1.0"
+description = "Dynamic and declarative query filters for FastAPI, powered by Pydantic v2 and ready for multiple ORMs."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Ezequiel Parziale"},
+]
+dependencies = [
+    "fastapi>=0.110.0",
+    "pydantic[email]>=2.0.0",
+    "sqlalchemy>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
+    "uvicorn",
+    "httpx",
+    "pre-commit",
+    "mypy",
+    "types-setuptools",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+strict = true
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+    "W191",  # indentation contains tabs
+]
+
+[tool.ruff.lint.isort]
+known-third-party = ["fastapi", "pydantic", "starlette"]
