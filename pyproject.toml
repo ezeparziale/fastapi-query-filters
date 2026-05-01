@@ -1,6 +1,6 @@
 [project]
 name = "fastapi-query-filters"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Dynamic and declarative query filters for FastAPI, powered by Pydantic v2 and ready for multiple ORMs."
 readme = "README.md"
 requires-python = ">=3.11"
