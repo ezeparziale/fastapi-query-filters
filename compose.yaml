@@ -1,0 +1,43 @@
+services:
+ 
+  db:
+    image: postgres:18.1
+    hostname: postgres_db
+    container_name: postgres_db
+    restart: always
+    user: ${POSTGRES_USER}
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres-db:/var/lib/postgresql
+    networks:
+      - fastapi_query_filters_net
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  adminer:
+    image: adminer:5.4.1
+    hostname: adminer
+    container_name: adminer
+    restart: always
+    ports:
+      - 8080:8080
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgres_db
+      - ADMINER_DESIGN=hever
+    networks:
+      - fastapi_query_filters_net
+
+volumes:
+  postgres-db:
+
+networks:
+  fastapi_query_filters_net:
+    name: fastapi_query_filters_net
