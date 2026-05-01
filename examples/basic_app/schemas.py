@@ -13,12 +13,12 @@ class UserOut(BaseModel):
 class PostFilterExtra(BaseModel):
     # Virtual field to filter by author's age range even if not directly in PostOut top-level
     author__age: int | None = Field(
-        default=None, json_schema_extra={"filters": ["gte", "lte", "in"]}
+        default=None, json_schema_extra={"filters": ["gte", "lte", "in", "not_in"]}
     )
 
 
 class PostOut(BaseModel):
-    id: int = Field(json_schema_extra={"filters": ["eq", "gte", "lte", "in"]})
+    id: int = Field(json_schema_extra={"filters": ["eq", "gte", "lte", "in", "not_in"]})
 
     # Title with alias and search enabled
     title: str = Field(
