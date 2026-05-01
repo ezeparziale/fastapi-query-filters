@@ -15,7 +15,7 @@ Dynamic and declarative query filters for FastAPI, powered by Pydantic v2 and re
 ## Installation
 
 ```bash
-pip install fastapi-query-filters
+pip install git+https://github.com/ezeparziale/fastapi-query-filters.git
 ```
 
 ## Requirements
@@ -36,6 +36,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 class UserOut(BaseModel):
     id: int = Field(json_schema_extra={"filters": ["eq"]})
     email: EmailStr = Field(json_schema_extra={"filters": ["eq", "icontains"]})
+
     model_config = ConfigDict(from_attributes=True)
 
 class PostOut(BaseModel):
@@ -89,7 +90,7 @@ GET /posts?id__in=1,2,3
 GET /posts?title__icontains=python
 
 # Multiple filters
-GET /posts?published=true&title__icontains=api
+GET /posts?published__eq=true&title__icontains=api
 
 # Search across fields
 GET /posts?q=fastapi
