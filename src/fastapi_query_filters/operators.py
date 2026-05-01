@@ -29,6 +29,7 @@ DEFAULT_OPERATORS: dict[Any, list[FilterOperator]] = {
         FilterOperator.GTE,
         FilterOperator.LTE,
         FilterOperator.IN,
+        FilterOperator.NOT_IN,
     ],
     str: [
         FilterOperator.EQ,
@@ -37,6 +38,7 @@ DEFAULT_OPERATORS: dict[Any, list[FilterOperator]] = {
         FilterOperator.ILIKE,
         FilterOperator.ICONTAINS,
         FilterOperator.IN,
+        FilterOperator.NOT_IN,
     ],
     bool: [FilterOperator.EQ, FilterOperator.NE],
 }
