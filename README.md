@@ -53,6 +53,9 @@ class PostOut(BaseModel):
         search_field = "q"
         sort_field = "sort_by"
         enable_sort = True
+        enable_search = True
+        prefix = ""
+        search_columns = ["title", "description"]
 ```
 
 ### 2. Use in Your Endpoint
@@ -100,6 +103,164 @@ GET /posts?sort_by=-created_at,title
 
 # Combine filters and search
 GET /posts?id__in=1,2,3&is_active__eq=true&q=fastapi&sort_by=-created_at
+```
+
+## Supported Operators
+
+The library supports the following filter operators for different field types:
+
+| Operator | Description | Example | Types |
+|----------|-------------|---------|-------|
+| `eq` | Equal | `id__eq=1` | all |
+| `ne` | Not equal | `status__ne=inactive` | all |
+| `gt` | Greater than | `age__gt=18` | int, datetime |
+| `lt` | Less than | `age__lt=65` | int, datetime |
+| `gte` | Greater than or equal | `created_at__gte=2024-01-01` | int, datetime |
+| `lte` | Less than or equal | `price__lte=100` | int, datetime |
+| `in` | In list | `id__in=1,2,3` | all |
+| `not_in` | Not in list | `status__not_in=deleted,archived` | all |
+| `like` | SQL LIKE pattern | `name__like=%john%` | str |
+| `ilike` | SQL ILIKE (case-insensitive) | `email__ilike=%gmail%` | str |
+| `icontains` | Case-insensitive contains | `title__icontains=python` | str |
+
+## FilterConfig Configuration
+
+Customize filter behavior using the `FilterConfig` nested class in your schema:
+
+```python
+class PostOut(BaseModel):
+    # ... fields ...
+
+    class FilterConfig:
+        # Query parameter name for global search (default: "q")
+        search_field = "q"
+        
+        # Query parameter name for sorting (default: "sort_by")
+        sort_field = "sort_by"
+        
+        # Global prefix for all filter parameters (default: "")
+        prefix = ""
+        
+        # Enable/disable global search functionality (default: True)
+        enable_search = True
+        
+        # Enable/disable sorting functionality (default: True)
+        enable_sort = True
+        
+        # Columns to search when using global search query
+        search_columns = ["title", "description", "content"]
+        
+        # Optional: Pydantic model with virtual/extra filter fields
+        extra_filters = PostFilterExtra
+```
+
+### FilterConfig Parameters Explained
+
+- **search_field**: The query parameter name used for global search across multiple columns
+- **sort_field**: The query parameter name used to specify sorting order
+- **prefix**: A prefix prepended to all filter parameter names (e.g., `f_id__eq=1`)
+- **enable_search**: Toggle global search functionality on/off
+- **enable_sort**: Toggle dynamic sorting functionality on/off
+- **search_columns**: List of database columns to search when using the search_field parameter
+- **extra_filters**: A Pydantic model containing additional filter fields from the database that are not included in the main schema output
+
+## Advanced Features
+
+### Nested Relationship Filtering
+
+Filter by nested relationship fields using double underscore notation:
+
+```python
+# Filter posts by author's email
+GET /posts?author__email__icontains=example.com
+
+# Filter posts by author's age range
+GET /posts?author__age__gte=18&author__age__lte=65
+```
+
+### Dynamic Sorting
+
+Sort by multiple fields with ascending/descending order:
+
+```bash
+# Sort by created_at (descending), then by title (ascending)
+GET /posts?sort_by=-created_at,title
+
+# Sort by multiple fields
+GET /posts?sort_by=-updated_at,id,name
+```
+
+### Field Aliases
+
+Use `filter_alias` in `json_schema_extra` to map query parameters to different field names:
+
+```python
+class PostOut(BaseModel):
+    title: str = Field(
+        alias="post_title",
+        json_schema_extra={
+            "filters": ["eq", "icontains"],
+            "filter_alias": "post_title",
+        },
+    )
+
+# Query using the alias
+GET /posts?post_title__icontains=python
+```
+
+### Multiple Query Parameter Values
+
+Multiple values can be passed in different ways:
+
+```bash
+# Multiple eq operators
+GET /posts?id__eq=1&id__eq=2&id__eq=3
+
+# Comma-separated values with in operator
+GET /posts?id__in=1,2,3
+
+# Combined search and filters
+GET /posts?q=fastapi&is_active__eq=true&author__id__in=1,2,3
+```
+
+### Global Prefix
+
+Add a global prefix to all filter parameters for namespace isolation:
+
+```python
+class FilterConfig:
+    prefix = "f_"
+    
+# Query with prefix
+GET /posts?f_id__eq=1&f_title__icontains=api
+```
+
+### Extra Filters (Virtual Fields)
+
+Define additional filter fields that exist in the database but are not included in your main response schema:
+
+```python
+class PostFilterExtra(BaseModel):
+    # Database column available for filtering but not in PostOut response
+    author__age: int | None = Field(
+        default=None,
+        json_schema_extra={"filters": ["gte", "lte", "in"]}
+    )
+    # Another database field not exposed in the API response
+    status: str | None = Field(
+        default=None,
+        json_schema_extra={"filters": ["eq", "in"]}
+    )
+
+class PostOut(BaseModel):
+    # ... fields exposed in response ...
+    
+    class FilterConfig:
+        extra_filters = PostFilterExtra
+        
+# Query using extra filter fields
+GET /posts?author__age__gte=18
+GET /posts?status__eq=draft
 ```
 
 ## Documentation
