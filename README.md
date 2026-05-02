@@ -1,5 +1,10 @@
 # :rocket: fastapi-query-filters
 
+[![CI](https://github.com/ezeparziale/fastapi-query-filters/actions/workflows/ci.yml/badge.svg)](https://github.com/ezeparziale/fastapi-query-filters/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/fastapi-query-filters.svg)](https://pypi.org/project/fastapi-query-filters/)
+[![Python versions](https://img.shields.io/pypi/pyversions/fastapi-query-filters.svg)](https://pypi.org/project/fastapi-query-filters/)
+[![License](https://img.shields.io/github/license/ezeparziale/fastapi-query-filters.svg)](https://github.com/ezeparziale/fastapi-query-filters/blob/main/LICENSE)
+
 Dynamic and declarative query filters for FastAPI, powered by Pydantic v2 and ready for multiple ORMs.
 
 ## Features
