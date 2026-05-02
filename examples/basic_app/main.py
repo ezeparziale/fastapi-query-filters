@@ -1,5 +1,7 @@
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import Depends, FastAPI
 from sqlalchemy import select
@@ -11,7 +13,6 @@ from examples.basic_app.schemas import PostOut
 from examples.basic_app.seed import seed_db
 from fastapi_query_filters import FilterDep, FilterValues
 from fastapi_query_filters.orm.sqlalchemy import apply_filters
-from typing import Any, AsyncGenerator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
