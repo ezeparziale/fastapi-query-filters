@@ -14,6 +14,13 @@ dependencies = [
     "sqlalchemy>=2.0.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/ezeparziale/fastapi-query-filters"
+Documentation = "https://github.com/ezeparziale/fastapi-query-filters#readme"
+Repository = "https://github.com/ezeparziale/fastapi-query-filters"
+Issues = "https://github.com/ezeparziale/fastapi-query-filters/issues"
+Changelog = "https://github.com/ezeparziale/fastapi-query-filters/releases"
+
 [tool.hatch.version]
 source = "vcs"
 
