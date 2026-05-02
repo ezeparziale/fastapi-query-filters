@@ -7,7 +7,7 @@ from examples.basic_app.models import Post, User
 logger = logging.getLogger(__name__)
 
 
-def seed_db():
+def seed_db() -> None:
     """Seeds the database with fresh test data including deleted posts."""
     db = SessionLocal()
     try:

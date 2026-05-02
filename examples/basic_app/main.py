@@ -11,6 +11,7 @@ from examples.basic_app.schemas import PostOut
 from examples.basic_app.seed import seed_db
 from fastapi_query_filters import FilterDep, FilterValues
 from fastapi_query_filters.orm.sqlalchemy import apply_filters
+from typing import Any, AsyncGenerator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Dropping and recreating all tables...")
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
@@ -32,7 +33,7 @@ app = FastAPI(title="FastAPI Query Filters Example", lifespan=lifespan)
 @app.get("/posts", response_model=list[PostOut])
 def list_posts(
     db: Session = Depends(get_db), filters: FilterValues = FilterDep(PostOut)
-):
+) -> Any:
     """List posts with automatic filtering, search, and sorting."""
     stmt = select(Post)
 
