@@ -16,6 +16,7 @@ class FilterOperator(StrEnum):
     ICONTAINS = "icontains"
     IN = "in"
     NOT_IN = "not_in"
+    ISNULL = "isnull"
 
 
 # Mapping of Python types to their default allowed filter operators.
@@ -30,6 +31,7 @@ DEFAULT_OPERATORS: dict[Any, list[FilterOperator]] = {
         FilterOperator.LTE,
         FilterOperator.IN,
         FilterOperator.NOT_IN,
+        FilterOperator.ISNULL,
     ],
     str: [
         FilterOperator.EQ,
@@ -39,6 +41,7 @@ DEFAULT_OPERATORS: dict[Any, list[FilterOperator]] = {
         FilterOperator.ICONTAINS,
         FilterOperator.IN,
         FilterOperator.NOT_IN,
+        FilterOperator.ISNULL,
     ],
-    bool: [FilterOperator.EQ, FilterOperator.NE],
+    bool: [FilterOperator.EQ, FilterOperator.NE, FilterOperator.ISNULL],
 }

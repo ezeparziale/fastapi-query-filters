@@ -15,6 +15,7 @@ if datetime not in DEFAULT_OPERATORS:
         FilterOperator.EQ,
         FilterOperator.GTE,
         FilterOperator.LTE,
+        FilterOperator.ISNULL,
     ]
 
 
@@ -251,7 +252,9 @@ def _fields_from_schema(
 
             # Type mapping: Partial string matches use 'str', others use original type
             field_filter_type: Any
-            if op in (FilterOperator.IN, FilterOperator.NOT_IN):
+            if op == FilterOperator.ISNULL:
+                field_filter_type = bool | None
+            elif op in (FilterOperator.IN, FilterOperator.NOT_IN):
                 field_filter_type = str | list[actual_type] | None  # type: ignore[valid-type]
             elif op in STRING_OPS:
                 field_filter_type = str | None

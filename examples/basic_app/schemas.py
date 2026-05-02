@@ -6,6 +6,9 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 class UserOut(BaseModel):
     id: int = Field(json_schema_extra={"filters": ["eq"]})
     email: EmailStr = Field(json_schema_extra={"filters": ["eq", "icontains"]})
+    profile_bio: str | None = Field(
+        None, json_schema_extra={"filters": ["eq", "icontains", "isnull"]}
+    )
 
     model_config = ConfigDict(from_attributes=True)
 

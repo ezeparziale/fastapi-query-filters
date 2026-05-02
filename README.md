@@ -41,6 +41,10 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 class UserOut(BaseModel):
     id: int = Field(json_schema_extra={"filters": ["eq"]})
     email: EmailStr = Field(json_schema_extra={"filters": ["eq", "icontains"]})
+    profile_bio: str | None = Field(
+        None,
+        json_schema_extra={"filters": ["eq", "icontains", "isnull"]},
+    )
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -97,6 +101,10 @@ GET /posts?id__in=1,2,3
 # Filter by field with icontains operator
 GET /posts?title__icontains=python
 
+# Filter by author profile bio NULL / NOT NULL values
+GET /posts?author__profile_bio__isnull=true
+GET /posts?author__profile_bio__isnull=false
+
 # Multiple filters
 GET /posts?published__eq=true&title__icontains=api
 
@@ -127,6 +135,7 @@ The library supports the following filter operators for different field types:
 | `like` | SQL LIKE pattern | `name__like=%john%` | str |
 | `ilike` | SQL ILIKE (case-insensitive) | `email__ilike=%gmail%` | str |
 | `icontains` | Case-insensitive contains | `title__icontains=python` | str |
+| `isnull` | Check if value is NULL or NOT NULL (supports true/false or 1/0) | `status__isnull=true` | all |
 
 ## FilterConfig Configuration
 
