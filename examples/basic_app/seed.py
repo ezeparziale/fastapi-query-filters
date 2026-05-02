@@ -13,10 +13,18 @@ def seed_db() -> None:
     try:
         logger.info("Seeding database with fresh data...")
 
-        # Create Users
-        user1 = User(email="admin@example.com", age=30)
-        user2 = User(email="editor@example.com", age=25)
-        user3 = User(email="viewer@example.com", age=20)
+        # Create Users with different profile types
+        user1 = User(
+            email="admin@example.com",
+            age=30,
+            profile_bio="Senior architect and developer.",
+        )
+        user2 = User(
+            email="editor@example.com", age=25, profile_bio=None
+        )  # Test IS NULL
+        user3 = User(
+            email="viewer@example.com", age=20, profile_bio="Passionate about Python."
+        )
         db.add_all([user1, user2, user3])
         db.commit()
 

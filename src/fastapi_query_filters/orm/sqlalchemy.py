@@ -203,6 +203,8 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
         elif op == FilterOperator.NOT_IN:
             val_list = value if isinstance(value, list) else [value]
             return ~column.in_(val_list)
+        elif op == FilterOperator.ISNULL:
+            return column.is_(None) if value is True else column.isnot(None)
         return None
 
 
