@@ -2,7 +2,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from fastapi_query_filters import FilterValues
-from fastapi_query_filters.core import FilterConfig, create_filter_model
+from fastapi_query_filters.core import (
+    FilterConfig as FilterConfigBase,
+)
+from fastapi_query_filters.core import (
+    create_filter_model,
+)
 from fastapi_query_filters.orm.sqlalchemy import SQLAlchemyFilterAdapter, apply_filters
 from tests.models import Post, User
 from tests.schemas import PostOut, UserOut
@@ -26,7 +31,7 @@ def test_search_on_non_string_column(seeded_db: Session) -> None:
     """Test that search works even on non-string fields like age."""
 
     class CustomUserOut(UserOut):
-        class FilterConfig(FilterConfig):
+        class FilterConfig(FilterConfigBase):
             search_columns = ["age", "non_existent"]
             enable_search = True
 
@@ -78,7 +83,7 @@ def test_apply_filters_multi_sort(seeded_db: Session) -> None:
 def test_search_column_no_type() -> None:
     """Verify that search columns without a 'type' attribute (like relationships) are skipped during global search."""
 
-    class MockConfig(FilterConfig):
+    class MockConfig(FilterConfigBase):
         search_columns = ["posts"]
         enable_search = True
         search_field = "q"
