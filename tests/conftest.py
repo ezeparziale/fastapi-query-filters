@@ -1,14 +1,18 @@
+from collections.abc import Generator
+
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy import Engine, create_engine
+from sqlalchemy.orm import Session, sessionmaker
+
 from tests.models import Base
 from tests.seed import seed_db
 
 # Use SQLite in-memory for tests
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
+
 @pytest.fixture(scope="session")
-def engine():
+def engine() -> Generator[Engine, None, None]:
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
     )
@@ -16,8 +20,9 @@ def engine():
     yield engine
     Base.metadata.drop_all(bind=engine)
 
+
 @pytest.fixture(scope="function")
-def db_session(engine):
+def db_session(engine: Engine) -> Generator[Session, None, None]:
     connection = engine.connect()
     transaction = connection.begin()
     session_factory = sessionmaker(autocommit=False, autoflush=False, bind=connection)
@@ -29,7 +34,8 @@ def db_session(engine):
     transaction.rollback()
     connection.close()
 
+
 @pytest.fixture(scope="function")
-def seeded_db(db_session: Session):
+def seeded_db(db_session: Session) -> Session:
     seed_db(db_session)
     return db_session
