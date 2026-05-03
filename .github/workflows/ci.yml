@@ -38,7 +38,7 @@ jobs:
       - name: Run Mypy
         run: mypy .
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: python -m pytest
 
   build:

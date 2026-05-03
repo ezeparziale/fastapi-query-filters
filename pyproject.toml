@@ -40,6 +40,7 @@ source = "vcs"
 dev = [
     "ruff",
     "pytest",
+    "pytest-cov",
     "uvicorn",
     "httpx",
     "pre-commit",
@@ -54,6 +55,22 @@ build-backend = "hatchling.build"
 [tool.mypy]
 plugins = ["pydantic.mypy"]
 strict = true
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+    "--cov=fastapi_query_filters",
+    "--cov-report=term-missing",
+    "--cov-fail-under=100",
+]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["src/fastapi_query_filters"]
+
+[tool.coverage.report]
+show_missing = true
+sort = "-Cover"
 
 [tool.ruff]
 line-length = 88
