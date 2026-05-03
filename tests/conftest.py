@@ -17,8 +17,11 @@ def engine() -> Generator[Engine, None, None]:
         SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
     )
     Base.metadata.create_all(bind=engine)
-    yield engine
-    Base.metadata.drop_all(bind=engine)
+    try:
+        yield engine
+    finally:
+        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
 
 
 @pytest.fixture(scope="function")
