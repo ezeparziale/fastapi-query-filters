@@ -1,3 +1,4 @@
+import types
 from datetime import datetime
 from typing import Annotated, Any, Union, get_args, get_origin
 
@@ -8,6 +9,12 @@ from .operators import DEFAULT_OPERATORS, FilterOperator
 # --- Global Constants ---
 # Operators that perform partial string matching
 STRING_OPS = (FilterOperator.LIKE, FilterOperator.ILIKE, FilterOperator.ICONTAINS)
+
+
+def _is_union_origin(origin: Any) -> bool:
+    """True for typing.Union and PEP 604 unions (types.UnionType)."""
+    return origin is Union or origin is types.UnionType
+
 
 # Add datetime support to default operators if not present
 if datetime not in DEFAULT_OPERATORS:
@@ -97,7 +104,7 @@ class FilterBase(BaseModel):
             is_list = origin is list
 
             # Recursively check for List types within Union/Optional types
-            if not is_list and origin is Union:
+            if not is_list and _is_union_origin(origin):
                 for arg in get_args(target_type):
                     if get_origin(arg) is list:
                         is_list = True
@@ -122,7 +129,7 @@ def _get_root_type(t: Any) -> Any:
     which are Annotated types in Pydantic v2.
     """
     origin = get_origin(t)
-    if origin is Union:
+    if _is_union_origin(origin):
         args = get_args(t)
         # Filter out None to find the actual data type
         actual_types = [arg for arg in args if arg is not type(None)]
