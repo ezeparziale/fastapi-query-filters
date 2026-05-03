@@ -74,22 +74,18 @@ class FilterBase(BaseModel):
 
         for key, value in data.items():
             string_value = None
-            has_comma = False
 
-            # Detect string with a comma or a single-item list containing one
-            if isinstance(value, str) and "," in value:
-                has_comma = True
+            # Detect string values or single-item string lists for list fields
+            if isinstance(value, str):
                 string_value = value
             elif (
                 isinstance(value, list)
                 and len(value) == 1
                 and isinstance(value[0], str)
-                and "," in value[0]
             ):
-                has_comma = True
                 string_value = value[0]
 
-            if not has_comma:
+            if string_value is None:
                 continue
 
             field = cls.model_fields.get(key)
@@ -107,7 +103,7 @@ class FilterBase(BaseModel):
                         is_list = True
                         break
 
-            if is_list and string_value:
+            if is_list and string_value is not None:
                 new_data[key] = [v.strip() for v in string_value.split(",")]
 
         return new_data
@@ -188,13 +184,28 @@ def _fields_from_schema(
             and issubclass(actual_type, BaseModel)
             and depth > 0
         ):
+            nested_prefix = f"{prefix}{effective_name}__"
             nested_fields = _fields_from_schema(
                 actual_type,
-                prefix=f"{prefix}{effective_name}__",
+                prefix=nested_prefix,
                 depth=depth - 1,
                 use_alias=use_alias,
                 operators=operators,
             )
+
+            extra_schema: type[BaseModel] | None = getattr(
+                _get_filter_config(actual_type), "extra_filters", None
+            )
+            if extra_schema is not None:
+                extra_fields = _fields_from_schema(
+                    extra_schema,
+                    prefix=nested_prefix,
+                    depth=depth - 1,
+                    use_alias=use_alias,
+                    operators=operators,
+                )
+                nested_fields.update(extra_fields)
+
             fields.update(nested_fields)
             continue
 

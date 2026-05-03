@@ -137,7 +137,7 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
                 is_final = i == len(path_parts) - 1
 
                 # Metadata lookup for real database field name
-                filter_field_info = filter_model.model_fields.get(pydantic_key)
+                filter_field_info = type(filter_model).model_fields.get(pydantic_key)
                 if filter_field_info:
                     extra = filter_field_info.json_schema_extra
                     if isinstance(extra, dict) and is_final:
