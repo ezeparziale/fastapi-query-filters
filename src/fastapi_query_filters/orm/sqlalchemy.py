@@ -21,7 +21,15 @@ except ImportError:
     class RelationshipProperty:  # type: ignore
         pass
 
-    String, Text, and_, asc, desc, or_, sa_cast = None, None, None, None, None, None, None  # type: ignore
+    String, Text, and_, asc, desc, or_, sa_cast = (
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+    )  # type: ignore
 
 
 from ..core import FilterConfig
