@@ -37,6 +37,9 @@ Changelog = "https://github.com/ezeparziale/fastapi-query-filters/releases"
 source = "vcs"
 
 [project.optional-dependencies]
+all = [
+    "sqlalchemy>=2.0.0",
+]
 sqlalchemy = [
     "sqlalchemy>=2.0.0",
 ]
