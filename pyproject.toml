@@ -44,14 +44,14 @@ sqlalchemy = [
     "sqlalchemy>=2.0.0",
 ]
 dev = [
-    "ruff",
-    "pytest",
-    "pytest-cov",
-    "uvicorn",
-    "httpx",
-    "pre-commit",
-    "mypy",
-    "types-setuptools",
+    "ruff>=0.15.0",
+    "pytest>=9.0.0",
+    "pytest-cov>=7.0.0",
+    "uvicorn>=0.46.0",
+    "httpx>=0.28.0",
+    "pre-commit>=4.0.0",
+    "mypy>=1.20.0",
+    "types-setuptools>82.0.0",
 ]
 
 [build-system]
