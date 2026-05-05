@@ -24,7 +24,6 @@ classifiers = [
 dependencies = [
     "fastapi>=0.110.0",
     "pydantic[email]>=2.0.0",
-    "sqlalchemy>=2.0.0",
 ]
 
 [project.urls]
@@ -38,6 +37,12 @@ Changelog = "https://github.com/ezeparziale/fastapi-query-filters/releases"
 source = "vcs"
 
 [project.optional-dependencies]
+all = [
+    "sqlalchemy>=2.0.0",
+]
+sqlalchemy = [
+    "sqlalchemy>=2.0.0",
+]
 dev = [
     "ruff",
     "pytest",

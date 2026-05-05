@@ -20,7 +20,17 @@ Dynamic and declarative query filters for FastAPI, powered by Pydantic v2 and re
 ## Installation
 
 ```bash
-pip install git+https://github.com/ezeparziale/fastapi-query-filters.git
+# Standard installation
+pip install fastapi-query-filters
+
+# Installation with SQLAlchemy support
+pip install "fastapi-query-filters[sqlalchemy]"
+```
+
+*Note: If you are installing directly from GitHub:*
+
+```bash
+pip install "fastapi-query-filters[sqlalchemy] @ git+https://github.com/ezeparziale/fastapi-query-filters.git"
 ```
 
 ## Requirements
