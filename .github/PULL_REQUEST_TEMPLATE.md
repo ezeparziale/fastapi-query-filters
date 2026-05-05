@@ -2,7 +2,7 @@
 
 <!-- What does this PR do? Link the issue it resolves. -->
 
-**Motivation:** <why this change is needed>  
+**Motivation:** <why this change is needed>
 **Approach:** <brief description of the solution>
 
 Fixes #<issue-number>
