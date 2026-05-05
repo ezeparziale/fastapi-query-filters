@@ -158,22 +158,22 @@ class PostOut(BaseModel):
     class FilterConfig:
         # Query parameter name for global search (default: "q")
         search_field = "q"
-        
+
         # Query parameter name for sorting (default: "sort_by")
         sort_field = "sort_by"
-        
+
         # Global prefix for all filter parameters (default: "")
         prefix = ""
-        
+
         # Enable/disable global search functionality (default: True)
         enable_search = True
-        
+
         # Enable/disable sorting functionality (default: True)
         enable_sort = True
-        
+
         # Columns to search when using global search query
         search_columns = ["title", "description", "content"]
-        
+
         # Optional: Pydantic model with virtual/extra filter fields
         extra_filters = PostFilterExtra
 ```
@@ -254,7 +254,7 @@ Add a global prefix to all filter parameters for namespace isolation:
 ```python
 class FilterConfig:
     prefix = "f_"
-    
+
 # Query with prefix
 GET /posts?f_id__eq=1&f_title__icontains=api
 ```
@@ -278,10 +278,10 @@ class PostFilterExtra(BaseModel):
 
 class PostOut(BaseModel):
     # ... fields exposed in response ...
-    
+
     class FilterConfig:
         extra_filters = PostFilterExtra
-        
+
 # Query using extra filter fields
 GET /posts?author__age__gte=18
 GET /posts?status__eq=draft
