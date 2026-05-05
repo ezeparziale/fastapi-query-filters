@@ -1,4 +1,4 @@
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 try:
     from sqlalchemy import String, Text, and_, asc, desc, or_
@@ -10,26 +10,19 @@ try:
 except ImportError:
     HAS_SQLALCHEMY = False
 
-    # Define dummy classes/types to avoid NameErrors during module load
-    # These will never be used because we'll raise an error before they are accessed
-    class DeclarativeBase:  # type: ignore
-        pass
+    if not TYPE_CHECKING:
+        # Define dummy classes/types to avoid NameErrors during module load
+        # These will never be used because we'll raise an error before they are accessed
+        class DeclarativeBase:
+            pass
 
-    class Select:  # type: ignore
-        pass
+        class Select:
+            pass
 
-    class RelationshipProperty:  # type: ignore
-        pass
+        class RelationshipProperty:
+            pass
 
-    String, Text, and_, asc, desc, or_, sa_cast = (
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-    )  # type: ignore
+        String = Text = and_ = asc = desc = or_ = sa_cast = None
 
 
 from ..core import FilterConfig
@@ -37,7 +30,13 @@ from ..dependencies import FilterValues
 from ..operators import FilterOperator
 from .base import ORMFilterAdapter
 
-T = TypeVar("T", bound=DeclarativeBase)
+if TYPE_CHECKING:
+    # This helps Mypy when sqlalchemy is not installed in the dev environment
+    # but we are running in a mode that expects it.
+    from sqlalchemy.orm import DeclarativeBase
+    from sqlalchemy.sql import Select
+
+T = TypeVar("T", bound="DeclarativeBase")
 
 
 def _check_sqlalchemy() -> None:
@@ -60,10 +59,10 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
 
     def apply_filters(
         self,
-        stmt: Select[tuple[T]],
+        stmt: "Select[tuple[T]]",
         model: type[T],
         filter_values: FilterValues,
-    ) -> Select[tuple[T]]:
+    ) -> "Select[tuple[T]]":
         """Applies dynamic filters and sorting to a SQLAlchemy select statement."""
         _check_sqlalchemy()
         data = filter_values.dict()
@@ -86,11 +85,11 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
 
     def _apply_global_features(
         self,
-        stmt: Select[tuple[T]],
+        stmt: "Select[tuple[T]]",
         model: type[T],
         data: dict[str, Any],
         config: type[FilterConfig],
-    ) -> Select[tuple[T]]:
+    ) -> "Select[tuple[T]]":
         """Handles global search and sorting logic."""
         search_field = (
             getattr(config, "search_field", "q")
@@ -136,12 +135,12 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
 
     def _apply_dynamic_filters(
         self,
-        stmt: Select[tuple[T]],
+        stmt: "Select[tuple[T]]",
         model: type[T],
         filter_model: Any,
         data: dict[str, Any],
         config: type[FilterConfig],
-    ) -> Select[tuple[T]]:
+    ) -> "Select[tuple[T]]":
         """Handles column-specific filters and automatic joins."""
         filters: list[Any] = []
         joined_paths: set[str] = set()
@@ -248,10 +247,10 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
 
 
 def apply_filters(
-    stmt: Select[tuple[T]],
+    stmt: "Select[tuple[T]]",
     model: type[T],
     filter_values: FilterValues,
-) -> Select[tuple[T]]:
+) -> "Select[tuple[T]]":
     """Standalone utility for applying filters using the SQLAlchemy adapter.
 
     This is the primary entry point for SQLAlchemy-based projects.
