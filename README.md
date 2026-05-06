@@ -15,6 +15,8 @@ Dynamic and declarative query filters for FastAPI, powered by Pydantic v2 and re
 - 📦 **Pydantic v2**: Full integration with Pydantic v2 for robust data validation
 - ⚡ **FastAPI Native**: Seamlessly integrates with FastAPI dependencies
 - 🔤 **Search & Sort**: Support for text search and custom sorting operators
+- 🌳 **Multi-level Relationships**: Filter through nested models at any depth
+- 🛡️ **Strict Mode**: Optional strict validation for unknown query parameters
 - 🧪 **Type Safe**: Full type hints and mypy strict mode support
 
 ## Installation
@@ -174,6 +176,12 @@ class PostOut(BaseModel):
         # Columns to search when using global search query
         search_columns = ["title", "description", "content"]
 
+        # Maximum depth for recursive relationship filtering (default: 1)
+        max_depth = 1
+
+        # Whether to forbid all unknown query parameters (default: False)
+        strict = False
+
         # Optional: Pydantic model with virtual/extra filter fields
         extra_filters = PostFilterExtra
 ```
@@ -186,6 +194,8 @@ class PostOut(BaseModel):
 - **enable_search**: Toggle global search functionality on/off
 - **enable_sort**: Toggle dynamic sorting functionality on/off
 - **search_columns**: List of database columns to search when using the search_field parameter
+- **max_depth**: Set the recursion limit for relationship filtering. Increase this to allow filtering by fields in nested models (e.g., `author__team__name__eq`).
+- **strict**: Enable total strict mode to reject any query parameter not defined in the filter model (returns 422 error).
 - **extra_filters**: A Pydantic model containing additional filter fields from the database that are not included in the main schema output
 
 ## Advanced Features
@@ -200,6 +210,36 @@ GET /posts?author__email__icontains=example.com
 
 # Filter posts by author's age range
 GET /posts?author__age__gte=18&author__age__lte=65
+```
+
+### Multi-level Relationships 🌳
+
+Use `max_depth` to control how deep the relationships can go (default is 1):
+
+```python
+class PostOut(BaseModel):
+    author: UserOut # UserOut has a 'team' relationship
+
+    class FilterConfig:
+        max_depth = 2 # Allow Post -> User -> Team
+
+# Filter posts by author's team name
+GET /posts?author__team__name__eq=Medical
+```
+
+### Strict Validation Mode 🛡️
+
+By default, unknown query parameters are ignored. Enable `strict` mode to reject malformed requests or unauthorized parameters:
+
+```python
+class FilterConfig:
+    strict = True
+    prefix = "f_"
+
+# These will return 422 Unprocessable Entity:
+GET /posts?invalid_param=1
+GET /posts?f_typo__eq=value
+GET /posts?page=1 # Even unrelated params are blocked in total strict mode
 ```
 
 ### Dynamic Sorting
