@@ -41,6 +41,7 @@ class FilterConfig:
         enable_sort: Whether to enable the dynamic sorting functionality.
         search_columns: List of database column names to include in global search.
         max_depth: Maximum depth for recursive relationship filtering (default: 1).
+        strict: Whether to forbid all unknown query parameters (default: False).
         extra_filters: An optional Pydantic model containing virtual fields
             to be included in the filter generation.
     """
@@ -52,6 +53,7 @@ class FilterConfig:
     enable_sort: bool = True
     search_columns: list[str] = []
     max_depth: int = 1
+    strict: bool = False
     extra_filters: type[BaseModel] | None = None
 
 
@@ -116,6 +118,26 @@ class FilterBase(BaseModel):
                 new_data[key] = [v.strip() for v in string_value.split(",")]
 
         return new_data
+
+    @model_validator(mode="before")
+    @classmethod
+    def validate_strict_filters(cls, data: Any) -> Any:
+        """Validates that no unknown query parameters are provided if strict mode is enabled."""
+        if not isinstance(data, dict):
+            return data
+
+        # Access the source configuration from the generated class
+        config = getattr(cls, "_source_filter_config", None)
+        if not config or not getattr(config, "strict", False):
+            return data
+
+        allowed_fields = set(cls.model_fields.keys())
+
+        for key in data.keys():
+            if key not in allowed_fields:
+                raise ValueError(f"Extra inputs are not permitted: {key}")
+
+        return data
 
 
 # --- Internal Helper Functions ---
