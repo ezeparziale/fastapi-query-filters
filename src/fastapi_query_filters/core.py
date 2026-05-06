@@ -40,6 +40,7 @@ class FilterConfig:
         enable_search: Whether to enable the global search functionality.
         enable_sort: Whether to enable the dynamic sorting functionality.
         search_columns: List of database column names to include in global search.
+        max_depth: Maximum depth for recursive relationship filtering (default: 1).
         strict: Whether to forbid all unknown query parameters (default: False).
         extra_filters: An optional Pydantic model containing virtual fields
             to be included in the filter generation.
@@ -51,6 +52,7 @@ class FilterConfig:
     enable_search: bool = True
     enable_sort: bool = True
     search_columns: list[str] = []
+    max_depth: int = 1
     strict: bool = False
     extra_filters: type[BaseModel] | None = None
 
@@ -324,7 +326,7 @@ def create_filter_model(
     sort_field: str | None = None,
     prefix: str | None = None,
     use_alias: bool = True,
-    depth: int = 1,
+    depth: int | None = None,
 ) -> Any:
     """Dynamically creates a Pydantic model for filtering based on a base schema.
 
@@ -352,6 +354,8 @@ def create_filter_model(
         sort_field = getattr(config, "sort_field", "sort_by") if enable_sort else None
     if prefix is None:
         prefix = getattr(config, "prefix", "")
+    if depth is None:
+        depth = getattr(config, "max_depth", 1)
 
     # Process standard schema fields
     fields = _fields_from_schema(
