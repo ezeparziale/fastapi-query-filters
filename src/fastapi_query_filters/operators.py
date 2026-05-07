@@ -33,6 +33,15 @@ DEFAULT_OPERATORS: dict[Any, list[FilterOperator]] = {
         FilterOperator.NOT_IN,
         FilterOperator.ISNULL,
     ],
+    float: [
+        FilterOperator.EQ,
+        FilterOperator.NE,
+        FilterOperator.GT,
+        FilterOperator.LT,
+        FilterOperator.GTE,
+        FilterOperator.LTE,
+        FilterOperator.ISNULL,
+    ],
     str: [
         FilterOperator.EQ,
         FilterOperator.NE,
