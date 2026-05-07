@@ -29,6 +29,7 @@ class UserOut(BaseModel):
 class PostOut(BaseModel):
     id: int = Field(json_schema_extra={"filters": ["eq", "gt", "lt", "in"]})
     title: str = Field(json_schema_extra={"filters": ["eq", "icontains"]})
+    user_id: int = Field(json_schema_extra={"filters": ["eq"]})
     created_at: datetime = Field(json_schema_extra={"filters": ["gte", "lte"]})
     author: UserOut
 

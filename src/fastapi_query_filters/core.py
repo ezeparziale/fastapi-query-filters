@@ -40,6 +40,8 @@ class FilterConfig:
         enable_search: Whether to enable the global search functionality.
         enable_sort: Whether to enable the dynamic sorting functionality.
         search_columns: List of database column names to include in global search.
+        sort_columns: Explicit list of field names allowed for sorting.
+            If None, all schema fields are allowed (default: None).
         max_depth: Maximum depth for recursive relationship filtering (default: 1).
         strict: Whether to forbid all unknown query parameters (default: False).
         extra_filters: An optional Pydantic model containing virtual fields
@@ -52,6 +54,7 @@ class FilterConfig:
     enable_search: bool = True
     enable_sort: bool = True
     search_columns: list[str] = []
+    sort_columns: list[str] | None = None
     max_depth: int = 1
     strict: bool = False
     extra_filters: type[BaseModel] | None = None
@@ -137,6 +140,23 @@ class FilterBase(BaseModel):
             if key not in allowed_fields:
                 raise ValueError(f"Extra inputs are not permitted: {key}")
 
+        # --- Strict sort field validation ---
+        sort_field = getattr(config, "sort_field", "sort_by")
+        enable_sort = getattr(config, "enable_sort", True)
+
+        if enable_sort and sort_field:
+            sort_value = data.get(sort_field)
+            if sort_value:
+                allowed_sort_fields = getattr(cls, "_allowed_sort_fields", None)
+                if allowed_sort_fields is not None:
+                    for field in sort_value.split(","):
+                        col_path = field.strip().lstrip("-")
+                        if col_path not in allowed_sort_fields:
+                            raise ValueError(
+                                f"Sort field '{col_path}' is not allowed. "
+                                f"Valid fields are: {sorted(allowed_sort_fields)}"
+                            )
+
         return data
 
 
@@ -180,6 +200,7 @@ def _fields_from_schema(
     use_alias: bool = True,
     prefix: str = "",
     depth: int = 1,
+    valid_paths: set[str] | None = None,
 ) -> dict[str, Any]:
     """Recursively extracts filter fields from a Pydantic schema.
 
@@ -207,6 +228,7 @@ def _fields_from_schema(
 
         # Resolve the base type (handling EmailStr, Annotated, Union, etc.)
         actual_type = _get_root_type(field_type)
+        field_path = f"{prefix}{effective_name}"
 
         # Recursive support for nested models (relationships)
         if (
@@ -214,13 +236,14 @@ def _fields_from_schema(
             and issubclass(actual_type, BaseModel)
             and depth > 0
         ):
-            nested_prefix = f"{prefix}{effective_name}__"
+            nested_prefix = f"{field_path}__"
             nested_fields = _fields_from_schema(
                 actual_type,
                 prefix=nested_prefix,
                 depth=depth - 1,
                 use_alias=use_alias,
                 operators=operators,
+                valid_paths=valid_paths,
             )
 
             extra_schema: type[BaseModel] | None = getattr(
@@ -233,6 +256,7 @@ def _fields_from_schema(
                     depth=depth - 1,
                     use_alias=use_alias,
                     operators=operators,
+                    valid_paths=valid_paths,
                 )
                 nested_fields.update(extra_fields)
 
@@ -242,6 +266,10 @@ def _fields_from_schema(
         # Skip complex containers that cannot be directly filtered
         if get_origin(actual_type) in (list, dict):
             continue
+
+        # If it's a leaf node, it's a valid path for sorting/searching
+        if valid_paths is not None:
+            valid_paths.add(field_path)
 
         custom_filters = (operators or {}).get(name)
 
@@ -357,12 +385,14 @@ def create_filter_model(
         depth = getattr(config, "max_depth", 1)
 
     # Process standard schema fields
+    valid_paths: set[str] = set()
     fields = _fields_from_schema(
         base_schema,
         operators=operators,
         use_alias=use_alias,
         prefix=prefix,
         depth=depth,
+        valid_paths=valid_paths,
     )
 
     # Process extra fields (virtual fields not present in the output schema)
@@ -374,6 +404,7 @@ def create_filter_model(
             use_alias=use_alias,
             prefix=prefix,
             depth=depth,
+            valid_paths=valid_paths,
         )
         fields.update(extra_fields)
 
@@ -398,5 +429,12 @@ def create_filter_model(
 
     # Embed the configuration into the generated model for the SQLAlchemy engine to read
     filter_model._source_filter_config = config  # type: ignore[attr-defined]
+
+    # Explicitly configured sort columns take precedence
+    sort_columns = getattr(config, "sort_columns", None)
+    if sort_columns is not None:
+        filter_model._allowed_sort_fields = set(sort_columns)  # type: ignore[attr-defined]
+    else:
+        filter_model._allowed_sort_fields = valid_paths  # type: ignore[attr-defined]
 
     return filter_model

@@ -142,10 +142,19 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
 
         # --- Dynamic Sorting ---
         if sort_by:
+            allowed_sort_fields = getattr(
+                filter_model_class, "_allowed_sort_fields", None
+            )
+
             for field in sort_by.split(","):
                 field = field.strip()
                 is_desc = field.startswith("-")
                 col_path = field[1:] if is_desc else field
+
+                # Validation: Only allow fields defined in the schema
+                if allowed_sort_fields is not None:
+                    if col_path not in allowed_sort_fields:
+                        continue
 
                 stmt, col = self._resolve_column(
                     stmt,

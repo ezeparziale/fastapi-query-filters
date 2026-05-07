@@ -77,6 +77,7 @@ class PostOut(BaseModel):
         enable_search = True
         prefix = ""
         search_columns = ["title", "description"]
+        sort_columns = ["id", "title", "created_at", "author__name"]  # Optional whitelist
 ```
 
 ### 2. Use in Your Endpoint
@@ -182,6 +183,9 @@ class PostOut(BaseModel):
         # Whether to forbid all unknown query parameters (default: False)
         strict = False
 
+        # Optional: explicit whitelist of fields allowed for sorting (default: None = all fields)
+        sort_columns = ["id", "title", "created_at", "author__name"]
+
         # Optional: Pydantic model with virtual/extra filter fields
         extra_filters = PostFilterExtra
 ```
@@ -195,7 +199,8 @@ class PostOut(BaseModel):
 - **enable_sort**: Toggle dynamic sorting functionality on/off
 - **search_columns**: List of database columns to search when using the search_field parameter
 - **max_depth**: Set the recursion limit for relationship filtering. Increase this to allow filtering by fields in nested models (e.g., `author__team__name__eq`).
-- **strict**: Enable total strict mode to reject any query parameter not defined in the filter model (returns 422 error).
+- **strict**: Enable total strict mode to reject any query parameter not defined in the filter model (returns 422 error). In strict mode, this also applies to `sort_by` — any field not in `sort_columns` returns 422.
+- **sort_columns**: Explicit list of field names allowed as sort targets. When set, only listed fields can be used with `sort_by`. If `None`, all leaf fields from the schema are valid sort targets. In `strict` mode, passing an unlisted field returns a 422 error; otherwise it is silently ignored.
 - **extra_filters**: A Pydantic model containing additional filter fields from the database that are not included in the main schema output
 
 ## Advanced Features
@@ -242,6 +247,18 @@ GET /posts?f_typo__eq=value
 GET /posts?page=1 # Even unrelated params are blocked in total strict mode
 ```
 
+Strict mode also validates the `sort_by` parameter when `sort_columns` is defined. Any sort field not in the whitelist returns 422:
+
+```python
+class FilterConfig:
+    strict = True
+    sort_columns = ["id", "created_at"]
+
+# 422 — not in sort_columns
+GET /posts?sort_by=title
+GET /posts?sort_by=author__team__name
+```
+
 ### Dynamic Sorting
 
 Sort by multiple fields with ascending/descending order:
@@ -252,6 +269,52 @@ GET /posts?sort_by=-created_at,title
 
 # Sort by multiple fields
 GET /posts?sort_by=-updated_at,id,name
+```
+
+By default, all schema leaf fields (including nested ones) are valid sort targets. Use `sort_columns` to restrict which fields can be sorted:
+
+```python
+class PostOut(BaseModel):
+    id: int
+    title: str
+    created_at: datetime
+    author: UserOut  # UserOut has 'name', 'team', etc.
+
+    class FilterConfig:
+        sort_field = "sort_by"
+        sort_columns = ["id", "created_at", "author__name"]  # Only these are sortable
+```
+
+```bash
+# Allowed
+GET /posts?sort_by=id
+GET /posts?sort_by=-created_at,author__name
+
+# Silently ignored (strict=False, the default)
+GET /posts?sort_by=title
+
+# Returns 422 if strict=True
+GET /posts?sort_by=title
+GET /posts?sort_by=author__team__name
+```
+
+When `strict = True`, any `sort_by` value not present in `sort_columns` returns a **422 Unprocessable Entity**:
+
+```python
+class FilterConfig:
+    strict = True
+    sort_columns = ["id", "created_at"]
+```
+
+```bash
+# 422 — 'title' is not in sort_columns
+GET /posts?sort_by=title
+
+# 422 — '-title' strips the '-' prefix, still not allowed
+GET /posts?sort_by=-title
+
+# 422 — 'id' is valid but 'title' is not, whole request is rejected
+GET /posts?sort_by=id,title
 ```
 
 ### Field Aliases
