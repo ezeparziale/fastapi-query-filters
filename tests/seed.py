@@ -17,6 +17,7 @@ def seed_db(db: Session) -> None:
         age=50,
         is_active=True,
         created_at=datetime(2026, 1, 1),
+        health_status=95.5,
     )
     user2 = User(
         email="carter@example.com",
@@ -24,6 +25,7 @@ def seed_db(db: Session) -> None:
         age=35,
         is_active=True,
         created_at=datetime(2026, 2, 1),
+        health_status=100.0,
     )
     user3 = User(
         email="tealc@example.com",
@@ -31,6 +33,7 @@ def seed_db(db: Session) -> None:
         age=157,
         is_active=False,
         created_at=datetime(2026, 3, 1),
+        health_status=100.0,
     )
 
     db.add_all([user1, user2, user3])

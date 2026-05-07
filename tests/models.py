@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 # --- SQLAlchemy Models ---
@@ -19,6 +19,7 @@ class User(Base):
     age: Mapped[int | None] = mapped_column(Integer)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    health_status: Mapped[float] = mapped_column(Float, default=100.0)
 
     posts: Mapped[list["Post"]] = relationship(back_populates="author")
 

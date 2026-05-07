@@ -19,6 +19,7 @@ class UserOut(BaseModel):
         None, json_schema_extra={"filters": ["eq", "icontains", "isnull"]}
     )
     is_active: bool = Field(json_schema_extra={"filters": ["eq"]})
+    health_status: float = Field(json_schema_extra={"filters": ["eq", "gte", "lte"]})
 
     model_config = ConfigDict(from_attributes=True)
 
