@@ -67,18 +67,23 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
         _check_sqlalchemy()
         data = filter_values.dict()
         filter_model = filter_values.model
+        filter_model_class = type(filter_model)
 
         # --- Configuration Retrieval ---
         embedded_config: type[FilterConfig] = getattr(
-            filter_model, "_source_filter_config", FilterConfig
+            filter_model_class, "_source_filter_config", FilterConfig
         )
 
+        joined_paths: set[str] = set()
+
         # 1. Process Global Features (Search & Sort)
-        stmt = self._apply_global_features(stmt, model, data, embedded_config)
+        stmt = self._apply_global_features(
+            stmt, model, data, embedded_config, filter_model_class, joined_paths
+        )
 
         # 2. Process Dynamic Filters
         stmt = self._apply_dynamic_filters(
-            stmt, model, filter_model, data, embedded_config
+            stmt, model, filter_model, data, embedded_config, joined_paths
         )
 
         return stmt
@@ -89,8 +94,13 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
         model: type[T],
         data: dict[str, Any],
         config: type[FilterConfig],
+        filter_model_class: type[Any] | None = None,
+        joined_paths: set[str] | None = None,
     ) -> "Select[tuple[T]]":
         """Handles global search and sorting logic."""
+        if joined_paths is None:
+            joined_paths = set()
+
         search_field = (
             getattr(config, "search_field", "q")
             if getattr(config, "enable_search", True)
@@ -102,6 +112,7 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
             else None
         )
         search_columns: list[str] = list(getattr(config, "search_columns", []))
+        global_prefix = getattr(config, "prefix", "")
 
         q = data.pop(search_field, None) if search_field else None
         sort_by = data.pop(sort_field, None) if sort_field else None
@@ -109,9 +120,17 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
         # --- Global Search (OR clauses) ---
         if q and search_columns:
             search_filters = []
-            for col_name in search_columns:
-                if hasattr(model, col_name):
-                    col = getattr(model, col_name)
+            for col_path in search_columns:
+                # Use resolve_column for search columns too, allowing nested search
+                stmt, col = self._resolve_column(
+                    stmt,
+                    model,
+                    col_path,
+                    joined_paths,
+                    filter_model_class=filter_model_class,
+                    global_prefix="",  # Search columns usually don't have prefixes
+                )
+                if col is not None:
                     if not hasattr(col, "type"):
                         continue
                     if not isinstance(col.type, (String, Text)):
@@ -126,12 +145,81 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
             for field in sort_by.split(","):
                 field = field.strip()
                 is_desc = field.startswith("-")
-                col_name = field[1:] if is_desc else field
-                if hasattr(model, col_name):
-                    col = getattr(model, col_name)
+                col_path = field[1:] if is_desc else field
+
+                stmt, col = self._resolve_column(
+                    stmt,
+                    model,
+                    col_path,
+                    joined_paths,
+                    filter_model_class=filter_model_class,
+                    global_prefix=global_prefix,
+                )
+
+                if col is not None:
                     stmt = stmt.order_by(desc(col) if is_desc else asc(col))
 
         return stmt
+
+    def _resolve_column(
+        self,
+        stmt: "Select[tuple[T]]",
+        model: type[T],
+        field_path: str,
+        joined_paths: set[str],
+        filter_model_class: type[Any] | None = None,
+        global_prefix: str = "",
+    ) -> tuple["Select[tuple[T]]", Any]:
+        """Resolves a field path to a SQLAlchemy column, handling joins and aliases."""
+        # Strip global prefix if present
+        if global_prefix and field_path.startswith(global_prefix):
+            field_path = field_path[len(global_prefix) :]
+
+        current_model: type[Any] = model
+        current_column: Any = None
+
+        path_parts = field_path.split("__")
+        for i, part in enumerate(path_parts):
+            real_name = part
+            is_final = i == len(path_parts) - 1
+
+            # Alias resolution: Look for the real field name in the filter model metadata
+            if filter_model_class is not None:
+                for field_info in filter_model_class.model_fields.values():
+                    extra = field_info.json_schema_extra
+                    if not isinstance(extra, dict):
+                        continue
+
+                    if extra.get("field_alias") == part:
+                        original = extra.get("original_field", part)
+                        # The original field might be 'author__name', we need the part for this level
+                        real_name = (
+                            original.split("__")[i] if "__" in original else original
+                        )
+                        break
+
+            if not is_final:
+                # Relationship handling: Automatic Join
+                if not hasattr(current_model, real_name):
+                    return stmt, None
+
+                rel_attr = getattr(current_model, real_name)
+                if not hasattr(rel_attr, "property"):
+                    return stmt, None
+
+                rel = rel_attr.property
+                if isinstance(rel, RelationshipProperty):
+                    path_key = f"{current_model.__name__}.{real_name}"
+                    if path_key not in joined_paths:
+                        stmt = stmt.join(rel_attr)
+                        joined_paths.add(path_key)
+                    current_model = rel.mapper.class_
+            else:
+                # Final column resolution
+                if hasattr(current_model, real_name):
+                    current_column = getattr(current_model, real_name)
+
+        return stmt, current_column
 
     def _apply_dynamic_filters(
         self,
@@ -140,11 +228,18 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
         filter_model: Any,
         data: dict[str, Any],
         config: type[FilterConfig],
+        joined_paths: set[str] | None = None,
     ) -> "Select[tuple[T]]":
         """Handles column-specific filters and automatic joins."""
+        if joined_paths is None:
+            joined_paths = set()
+
         filters: list[Any] = []
-        joined_paths: set[str] = set()
         global_prefix = getattr(config, "prefix", "")
+
+        filter_model_class = (
+            filter_model if isinstance(filter_model, type) else type(filter_model)
+        )
 
         for key, value in data.items():
             if "__" not in key or value is None:
@@ -153,60 +248,22 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
             parts = key.rsplit("__", 1)
             field_path, op_str = parts[0], parts[1]
 
-            # Save the original key to lookup in pydantic model_fields
-            pydantic_key = key
-
-            # Strip global prefix if present for database mapping
-            if global_prefix and field_path.startswith(global_prefix):
-                field_path = field_path[len(global_prefix) :]
-
             try:
                 op = FilterOperator(op_str)
             except ValueError:
                 continue
 
-            current_model: type[Any] = model
-            current_column: Any = None
+            stmt, col = self._resolve_column(
+                stmt,
+                model,
+                field_path,
+                joined_paths,
+                filter_model_class=filter_model_class,
+                global_prefix=global_prefix,
+            )
 
-            # Resolve field paths, handling nested relationships (Joins)
-            path_parts = field_path.split("__")
-            for i, part in enumerate(path_parts):
-                real_name = part
-                is_final = i == len(path_parts) - 1
-
-                # Metadata lookup for real database field name
-                filter_field_info = type(filter_model).model_fields.get(pydantic_key)
-                if filter_field_info:
-                    extra = filter_field_info.json_schema_extra
-                    if isinstance(extra, dict) and is_final:
-                        original = extra.get("original_field", part)
-                        real_name = original.split("__")[-1]
-
-                if not is_final:
-                    # Relationship handling: Automatic Join
-                    if not hasattr(current_model, real_name):
-                        break
-
-                    rel_attr = getattr(current_model, real_name)
-                    if not hasattr(rel_attr, "property"):
-                        break
-
-                    rel = rel_attr.property
-                    if isinstance(rel, RelationshipProperty):
-                        # Track joins by model/attr to avoid ambiguous joins
-                        path_key = f"{current_model.__name__}.{real_name}"
-                        if path_key not in joined_paths:
-                            stmt = stmt.join(rel_attr)
-                            joined_paths.add(path_key)
-
-                        current_model = rel.mapper.class_
-                else:
-                    # Final column resolution.
-                    if hasattr(current_model, real_name):
-                        current_column = getattr(current_model, real_name)
-
-            if current_column is not None:
-                filters.append(self._get_operator_expression(current_column, op, value))
+            if col is not None:
+                filters.append(self._get_operator_expression(col, op, value))
 
         if filters:
             stmt = stmt.where(and_(*filters))
