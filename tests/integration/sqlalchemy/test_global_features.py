@@ -80,6 +80,18 @@ def test_apply_filters_multi_sort(seeded_db: Session) -> None:
     assert results[2].title == "The Fifth Race"
 
 
+def test_apply_filters_unauthorized_sort(seeded_db: Session) -> None:
+    """Verify that sorting by unauthorized fields (not in schema) is ignored."""
+    FilterModel = create_filter_model(PostOut)
+
+    # 'content' is in Post model but NOT in PostOut schema
+    filters = FilterValues(FilterModel(sort_by="content"))
+    stmt = apply_filters(select(Post), Post, filters)
+
+    sql = str(stmt.compile(bind=seeded_db.get_bind()))
+    assert "ORDER BY" not in sql
+
+
 def test_search_column_no_type() -> None:
     """Verify that search columns without a 'type' attribute (like relationships) are skipped during global search."""
 

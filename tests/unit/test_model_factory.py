@@ -51,6 +51,7 @@ def test_create_filter_model_nested() -> None:
         "id__in",
         "title__eq",
         "title__icontains",
+        "user_id__eq",
         "created_at__gte",
         "created_at__lte",
         # Nested User (author) fields
@@ -91,6 +92,7 @@ def test_create_filter_model_config_overrides() -> None:
         "f_id__in",
         "f_title__eq",
         "f_title__icontains",
+        "f_user_id__eq",
         "f_created_at__gte",
         "f_created_at__lte",
         # Prefixed Nested User fields
