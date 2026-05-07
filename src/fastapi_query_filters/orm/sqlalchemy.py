@@ -185,17 +185,13 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
 
             # Alias resolution: Look for the real field name in the filter model metadata
             if filter_model_class is not None:
-                for field_info in filter_model_class.model_fields.values():
+                for _f_name, field_info in filter_model_class.model_fields.items():
                     extra = field_info.json_schema_extra
                     if not isinstance(extra, dict):
                         continue
 
                     if extra.get("field_alias") == part:
-                        original = extra.get("original_field", part)
-                        # The original field might be 'author__name', we need the part for this level
-                        real_name = (
-                            original.split("__")[i] if "__" in original else original
-                        )
+                        real_name = extra.get("original_field", part)
                         break
 
             if not is_final:

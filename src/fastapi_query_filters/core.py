@@ -199,12 +199,11 @@ def _fields_from_schema(
         if not isinstance(field_extra, dict):
             field_extra = {}
 
-        if (
-            use_alias
-            and isinstance(field_extra, dict)
-            and "filter_alias" in field_extra
-        ):
-            effective_name = str(field_extra["filter_alias"])
+        if use_alias and isinstance(field_extra, dict):
+            if "filter_alias" in field_extra:
+                effective_name = str(field_extra["filter_alias"])
+            elif "field_alias" in field_extra:
+                effective_name = str(field_extra["field_alias"])
 
         # Resolve the base type (handling EmailStr, Annotated, Union, etc.)
         actual_type = _get_root_type(field_type)
