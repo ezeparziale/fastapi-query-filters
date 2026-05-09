@@ -1,3 +1,4 @@
+from datetime import date, datetime, time
 from enum import StrEnum
 from typing import Any
 
@@ -53,4 +54,37 @@ DEFAULT_OPERATORS: dict[Any, list[FilterOperator]] = {
         FilterOperator.ISNULL,
     ],
     bool: [FilterOperator.EQ, FilterOperator.NE, FilterOperator.ISNULL],
+    date: [
+        FilterOperator.EQ,
+        FilterOperator.NE,
+        FilterOperator.GT,
+        FilterOperator.LT,
+        FilterOperator.GTE,
+        FilterOperator.LTE,
+        FilterOperator.IN,
+        FilterOperator.NOT_IN,
+        FilterOperator.ISNULL,
+    ],
+    datetime: [
+        FilterOperator.EQ,
+        FilterOperator.NE,
+        FilterOperator.GT,
+        FilterOperator.LT,
+        FilterOperator.GTE,
+        FilterOperator.LTE,
+        FilterOperator.IN,
+        FilterOperator.NOT_IN,
+        FilterOperator.ISNULL,
+    ],
+    time: [
+        FilterOperator.EQ,
+        FilterOperator.NE,
+        FilterOperator.GT,
+        FilterOperator.LT,
+        FilterOperator.GTE,
+        FilterOperator.LTE,
+        FilterOperator.IN,
+        FilterOperator.NOT_IN,
+        FilterOperator.ISNULL,
+    ],
 }
