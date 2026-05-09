@@ -12,7 +12,7 @@ def test_automatic_join_one_level(seeded_db: Session) -> None:
     """Test that filtering by a nested field automatically joins the related table."""
     FilterModel = create_filter_model(PostOut)
     # Filter posts by author email
-    filters = FilterValues(FilterModel(author__email__eq="oneill@example.com"))
+    filters = FilterValues(FilterModel(f_author__email__eq="j.oneill@sgc.mil"))
 
     stmt = select(Post)
     stmt = apply_filters(stmt, Post, filters)
@@ -24,29 +24,32 @@ def test_automatic_join_one_level(seeded_db: Session) -> None:
     results = seeded_db.execute(stmt).scalars().all()
     assert len(results) == 2  # Jack has 2 posts
     for r in results:
-        assert r.author.email == "oneill@example.com"
+        assert r.author.email == "j.oneill@sgc.mil"
 
 
 def test_automatic_join_with_extra_filter(seeded_db: Session) -> None:
     """Test that nested joins work even for fields defined in extra_filters."""
     FilterModel = create_filter_model(PostOut)
-    # Filter posts by author age (age is in UserFilterExtra)
-    # Carter is 35, O'Neill is 50.
-    filters = FilterValues(FilterModel(author__age__lt=40))
+    # Filter posts by author age (age is in UserOut)
+    # Carter is 35, O'Neill is 45, Teal'c is 105, Janet is 38.
+    filters = FilterValues(FilterModel(f_author__age__lt=40))
 
     stmt = select(Post)
     stmt = apply_filters(stmt, Post, filters)
 
     results = seeded_db.execute(stmt).scalars().all()
-    assert len(results) == 1  # Only Sam's post
-    assert results[0].author.name == "Samantha Carter"
+    assert len(results) == 2  # Sam's post + Janet's post
+    names = [r.author.name for r in results]
+    assert "Samantha Carter" in names
+    assert "Janet Fraiser" in names
 
 
 def test_multiple_joins_avoid_duplicates(seeded_db: Session) -> None:
     """Test that multiple filters on the same relation only result in one JOIN."""
     FilterModel = create_filter_model(PostOut)
+    # Use fields that exist in UserOut: email and rank
     filters = FilterValues(
-        FilterModel(author__email__icontains="example.com", author__is_active__eq=True)
+        FilterModel(f_author__email__icontains="sgc.mil", f_author__rank__eq="Colonel")
     )
 
     stmt = select(Post)
@@ -57,7 +60,7 @@ def test_multiple_joins_avoid_duplicates(seeded_db: Session) -> None:
     assert sql.count("JOIN users") == 1
 
     results = seeded_db.execute(stmt).scalars().all()
-    assert len(results) == 3  # Jack (2) and Sam (1) are active
+    assert len(results) == 2  # Jack has 2 posts and is the only Colonel
 
 
 def test_apply_filters_nested_invalid_relationship() -> None:
