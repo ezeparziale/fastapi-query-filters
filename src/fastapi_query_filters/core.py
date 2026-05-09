@@ -1,5 +1,4 @@
 import types
-from datetime import datetime
 from typing import Annotated, Any, Union, get_args, get_origin
 
 from pydantic import BaseModel, ConfigDict, Field, create_model, model_validator
@@ -14,16 +13,6 @@ STRING_OPS = (FilterOperator.LIKE, FilterOperator.ILIKE, FilterOperator.ICONTAIN
 def _is_union_origin(origin: Any) -> bool:
     """True for typing.Union and PEP 604 unions (types.UnionType)."""
     return origin is Union or origin is types.UnionType
-
-
-# Add datetime support to default operators if not present
-if datetime not in DEFAULT_OPERATORS:
-    DEFAULT_OPERATORS[datetime] = [
-        FilterOperator.EQ,
-        FilterOperator.GTE,
-        FilterOperator.LTE,
-        FilterOperator.ISNULL,
-    ]
 
 
 # --- Configuration Classes ---
