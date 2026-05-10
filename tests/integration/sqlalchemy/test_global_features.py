@@ -1,8 +1,10 @@
+from typing import ClassVar, cast
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from fastapi_query_filters import FilterValues
-from fastapi_query_filters.core import create_filter_model
+from fastapi_query_filters.core import FilterConfig, create_filter_model
 from fastapi_query_filters.orm.sqlalchemy import SQLAlchemyFilterAdapter, apply_filters
 from tests.models import Post, User
 from tests.schemas import PostOut, UserOut
@@ -22,15 +24,18 @@ def test_global_search(seeded_db: Session) -> None:
     assert "Encounter in Chulak" in results[0].title
 
 
+class _NonStringSearchConfig:
+    search_columns: ClassVar[list[str]] = ["age", "non_existent"]
+    enable_search: ClassVar[bool] = True
+
+
+class _NonStringSearchUserOut(UserOut):
+    FilterConfig: ClassVar[type] = _NonStringSearchConfig
+
+
 def test_search_on_non_string_column(seeded_db: Session) -> None:
     """Test that search works even on non-string fields like age."""
-
-    class CustomUserOut(UserOut):
-        class FilterConfig:
-            search_columns = ["age", "non_existent"]
-            enable_search = True
-
-    FilterModel = create_filter_model(CustomUserOut)
+    FilterModel = create_filter_model(_NonStringSearchUserOut)
     filters = FilterValues(FilterModel(q="45"))  # Jack is 45
     stmt = select(User)
     stmt = apply_filters(stmt, User, filters)
@@ -58,15 +63,26 @@ def test_sorting(seeded_db: Session) -> None:
     assert results_desc[0].title == "Mission to Abydos"
 
 
+class _MultiSortFilterConfig:
+    sort_columns: ClassVar[list[str]] = ["userId", "post_title", "id"]
+    # inherit the rest of PostOut.FilterConfig attributes explicitly
+    search_field: ClassVar[str] = "q"
+    sort_field: ClassVar[str] = "sort_by"
+    enable_sort: ClassVar[bool] = True
+    enable_search: ClassVar[bool] = True
+    max_depth: ClassVar[int] = 2
+    strict: ClassVar[bool] = True
+    search_columns: ClassVar[list[str]] = ["title", "description"]
+    prefix: ClassVar[str] = "f_"
+
+
+class _MultiSortPostOut(PostOut):
+    FilterConfig: ClassVar[type] = _MultiSortFilterConfig  # type: ignore[assignment]
+
+
 def test_apply_filters_multi_sort(seeded_db: Session) -> None:
     """Test dynamic sorting by multiple fields."""
-
-    # We need to make sure userId and post_title are allowed in sort_columns
-    class CustomPostOut(PostOut):
-        class FilterConfig(PostOut.FilterConfig):
-            sort_columns = ["userId", "post_title", "id"]
-
-    FilterModel = create_filter_model(CustomPostOut)
+    FilterModel = create_filter_model(_MultiSortPostOut)
 
     # Sort by userId (asc) and post_title (desc)
     # Jack (userId=1) has: "Mission to Abydos" and "Contact with Asgard (Classified/Deleted)"
@@ -96,14 +112,16 @@ def test_apply_filters_unauthorized_sort(seeded_db: Session) -> None:
         FilterModel(sort_by="description")
 
 
+class MockSearchConfig:
+    search_columns: ClassVar[list[str]] = ["author"]
+    enable_search: ClassVar[bool] = True
+    search_field: ClassVar[str] = "q"
+
+
 def test_search_column_no_type() -> None:
     """Verify that search columns without a 'type' attribute (like relationships) are skipped during global search."""
-
-    class MockConfig:
-        search_columns = ["author"]
-        enable_search = True
-        search_field = "q"
-
     adapter = SQLAlchemyFilterAdapter()
-    stmt = adapter._apply_global_features(select(Post), Post, {"q": "test"}, MockConfig)
+    stmt = adapter._apply_global_features(
+        select(Post), Post, {"q": "test"}, cast(type[FilterConfig], MockSearchConfig)
+    )
     assert "WHERE" not in str(stmt)
