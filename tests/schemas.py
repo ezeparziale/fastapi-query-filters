@@ -53,7 +53,9 @@ class PostOut(BaseModel):
         },
     )
     description: str | None = Field(None, json_schema_extra={})
-    is_active: bool = Field(json_schema_extra={"filters": ["eq", "gte"]})
+    is_active: bool = Field(
+        json_schema_extra={"filters": ["eq", "ne", "gte", "isnull"]}
+    )
     gate_address: str | None = Field(
         None,
         pattern=r"^[A-Z0-9]{3}-[A-Z0-9]{3,4}$",
