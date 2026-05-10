@@ -17,11 +17,9 @@ def test_explicit_sort_columns(seeded_db: Session) -> None:
 
     FilterModel = create_filter_model(RestrictedPostOut)
 
-    # Try sorting by 'title' (should be ignored)
-    filters = FilterValues(FilterModel(sort_by="title"))
-    stmt = apply_filters(select(Post), Post, filters)
-    sql = str(stmt.compile(bind=seeded_db.get_bind()))
-    assert "ORDER BY" not in sql
+    # strict=True is inherited from PostOut, so sorting by 'title' should raise
+    with pytest.raises(ValueError, match="Sort field 'title' is not allowed"):
+        FilterModel(sort_by="title")
 
     # Try sorting by 'id' (should work)
     filters = FilterValues(FilterModel(sort_by="id"))
@@ -34,8 +32,8 @@ def test_default_sort_columns(seeded_db: Session) -> None:
     # Default behavior: all schema fields are sortable
     FilterModel = create_filter_model(PostOut)
 
-    # title should be sortable
-    filters = FilterValues(FilterModel(sort_by="title"))
+    # PostOut exposes the aliased field 'post_title' as sortable
+    filters = FilterValues(FilterModel(sort_by="post_title"))
     stmt = apply_filters(select(Post), Post, filters)
     sql = str(stmt.compile(bind=seeded_db.get_bind()))
     assert "ORDER BY posts.title ASC" in sql

@@ -46,12 +46,12 @@ def client(seeded_db: Session) -> Generator[TestClient, None, None]:
 
 def test_fastapi_e2e_basic_filter(client: TestClient) -> None:
     """Test basic filtering via HTTP query parameters."""
-    response = client.get("/posts?author__email__eq=oneill@example.com")
+    response = client.get("/posts?f_author__email__eq=j.oneill@sgc.mil")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 2
     for item in data:
-        assert item["author_email"] == "oneill@example.com"
+        assert item["author_email"] == "j.oneill@sgc.mil"
 
 
 def test_fastapi_e2e_global_search(client: TestClient) -> None:
@@ -60,18 +60,20 @@ def test_fastapi_e2e_global_search(client: TestClient) -> None:
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
-    assert "Children of the Gods" in data[0]["title"]
+    assert "Encounter in Chulak" in data[0]["title"]
 
 
 def test_fastapi_e2e_multi_filter_and_sort(client: TestClient) -> None:
     """Test combining multiple filters and sorting via HTTP."""
     # Jack has 2 posts. Sort by title descending.
-    response = client.get("/posts?author__email__eq=oneill@example.com&sort_by=-title")
+    response = client.get(
+        "/posts?f_author__email__eq=j.oneill@sgc.mil&sort_by=-post_title"
+    )
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 2
-    assert data[0]["title"] == "Window of Opportunity"
-    assert data[1]["title"] == "Children of the Gods"
+    assert data[0]["title"] == "Mission to Abydos"
+    assert data[1]["title"] == "Contact with Asgard (Classified/Deleted)"
 
 
 def test_fastapi_e2e_invalid_param(client: TestClient) -> None:
