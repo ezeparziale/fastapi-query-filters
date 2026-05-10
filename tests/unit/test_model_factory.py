@@ -72,6 +72,8 @@ def test_create_filter_model_nested() -> None:
         "f_post_title__eq",  # title alias
         "f_post_title__icontains",
         "f_is_active__eq",
+        "f_is_active__ne",
+        "f_is_active__isnull",
         "f_gate_address__eq",
         "f_gate_address__icontains",
         "f_gate_address__isnull",
