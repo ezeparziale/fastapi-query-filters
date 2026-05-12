@@ -148,7 +148,7 @@ The library supports the following filter operators for different field types:
 | `like` | SQL LIKE pattern | `name__like=%john%` | str |
 | `ilike` | SQL ILIKE (case-insensitive) | `email__ilike=%gmail%` | str |
 | `icontains` | Case-insensitive contains | `title__icontains=python` | str |
-| `isnull` | Check if value is NULL or NOT NULL (supports true/false or 1/0) | `status__isnull=true` | all |
+| `isnull` | Check if value is NULL or NOT NULL (supports boolean-like values: true/false, yes/no, 1/0, etc.) | `status__isnull=true` | all |
 
 ## FilterConfig Configuration
 
@@ -310,7 +310,7 @@ class FilterConfig:
 # 422 — 'title' is not in sort_columns
 GET /posts?sort_by=title
 
-# 422 — '-title' strips the '-' prefix, still not allowed
+# 422 — '-title' strips the '-' direction prefix, then validates 'title'
 GET /posts?sort_by=-title
 
 # 422 — 'id' is valid but 'title' is not, whole request is rejected
