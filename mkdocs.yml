@@ -1,0 +1,93 @@
+site_name: fastapi-query-filters
+site_url: https://ezeparziale.github.io/fastapi-query-filters/
+site_description: Efficient and intuitive query filtering for FastAPI, with built-in support for SQLAlchemy and extensibility for other ORMs.
+
+repo_name: ezeparziale/fastapi-query-filters
+repo_url: https://github.com/ezeparziale/fastapi-query-filters
+
+theme:
+  name: material
+  language: en
+  icon:
+    logo: material/filter-variant
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: amber
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: amber
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - navigation.footer
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - search.highlight
+    - search.share
+
+nav:
+  - Home: index.md
+  - User Guide:
+      - Configuration:
+          - Overview: user-guide/configuration/index.md
+          - Prefix: user-guide/configuration/prefix.md
+          - Strict Mode: user-guide/configuration/strict.md
+          - Search: user-guide/configuration/search.md
+          - Sorting: user-guide/configuration/sorting.md
+          - Depth: user-guide/configuration/depth.md
+          - Extra Filters: user-guide/configuration/extra-filters.md
+          - Per-field config: user-guide/configuration/json-schema-extra.md
+      - Operators: user-guide/operators.md
+  - Tutorials:
+      - Basic Usage: tutorials/basic-usage.md
+      - Advanced Usage: tutorials/advanced-usage.md
+  - ORM Adapters:
+      - Overview: orm-adapters/index.md
+      - SQLAlchemy: orm-adapters/sqlalchemy.md
+
+markdown_extensions:
+  - attr_list
+  - md_in_html
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      check_paths: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/ezeparziale
+    - icon: fontawesome/brands/x-twitter
+      link: https://x.com/ezeparziale
+
+copyright: Copyright &copy; 2026 Ezequiel Parziale
