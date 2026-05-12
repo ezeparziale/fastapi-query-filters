@@ -28,7 +28,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/ezeparziale/fastapi-query-filters"
-Documentation = "https://github.com/ezeparziale/fastapi-query-filters#readme"
+Documentation = "https://ezeparziale.github.io/fastapi-query-filters/"
 Repository = "https://github.com/ezeparziale/fastapi-query-filters"
 Issues = "https://github.com/ezeparziale/fastapi-query-filters/issues"
 Changelog = "https://github.com/ezeparziale/fastapi-query-filters/releases"
