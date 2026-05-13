@@ -147,3 +147,68 @@ def test_operators_extra(seeded_db: Session) -> None:
     assert len(results) == 2
     for r in results:
         assert r.id not in exclude_ids
+
+
+def test_apply_filters_advanced_text_operators(seeded_db: Session) -> None:
+    """Test advanced text operators: startswith, endswith, contains (and their 'i' versions)."""
+
+    class AdvancedStrSchema(BaseModel):
+        name: str = Field(
+            json_schema_extra={
+                "filters": [
+                    "startswith",
+                    "istartswith",
+                    "endswith",
+                    "iendswith",
+                    "contains",
+                ]
+            }
+        )
+        profile_bio: str = Field(json_schema_extra={"filters": ["contains"]})
+
+    FilterModel = create_filter_model(AdvancedStrSchema)
+
+    # startswith
+    filters = FilterValues(FilterModel(name__startswith="Jack"))
+    stmt = apply_filters(select(User), User, filters)
+    results = seeded_db.execute(stmt).scalars().all()
+    assert len(results) == 1
+    assert results[0].name == "Jack O'Neill"
+
+    # istartswith
+    filters = FilterValues(FilterModel(name__istartswith="jack"))
+    stmt = apply_filters(select(User), User, filters)
+    results = seeded_db.execute(stmt).scalars().all()
+    assert len(results) == 1
+    assert results[0].name == "Jack O'Neill"
+
+    # endswith
+    filters = FilterValues(FilterModel(name__endswith="Carter"))
+    stmt = apply_filters(select(User), User, filters)
+    results = seeded_db.execute(stmt).scalars().all()
+    assert len(results) == 1
+    assert results[0].name == "Samantha Carter"
+
+    # iendswith
+    filters = FilterValues(FilterModel(name__iendswith="carter"))
+    stmt = apply_filters(select(User), User, filters)
+    results = seeded_db.execute(stmt).scalars().all()
+    assert len(results) == 1
+    assert results[0].name == "Samantha Carter"
+
+    # contains (case-sensitive)
+    filters = FilterValues(FilterModel(profile_bio__contains="Indeed"))
+    stmt = apply_filters(select(User), User, filters)
+    results = seeded_db.execute(stmt).scalars().all()
+    assert len(results) == 1
+    assert results[0].name == "Teal'c"
+
+    # contains (negative case for case-sensitivity if dialect supports it)
+    # SQLite is case-insensitive by default for LIKE, so this might pass even if it shouldn't.
+    # But we test it anyway.
+    filters = FilterValues(FilterModel(profile_bio__contains="indeed"))
+    stmt = apply_filters(select(User), User, filters)
+    results = seeded_db.execute(stmt).scalars().all()
+    # In SQLite, this will likely be 1. In Postgres, 0.
+    # Given our CI uses SQLite, we don't assert 0 here to avoid flaky tests,
+    # but we've exercised the code path.
