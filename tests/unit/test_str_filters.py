@@ -13,6 +13,11 @@ class UserOut(BaseModel):
                 "like",
                 "ilike",
                 "icontains",
+                "contains",
+                "startswith",
+                "istartswith",
+                "endswith",
+                "iendswith",
                 "in",
                 "not_in",
                 "isnull",
@@ -54,6 +59,31 @@ def test_str_ilike_filter_generated() -> None:
 def test_str_icontains_filter_generated() -> None:
     """str field with icontains operator should generate the filter field."""
     assert "name__icontains" in FilterModel.model_fields
+
+
+def test_str_contains_filter_generated() -> None:
+    """str field with contains operator should generate the filter field."""
+    assert "name__contains" in FilterModel.model_fields
+
+
+def test_str_startswith_filter_generated() -> None:
+    """str field with startswith operator should generate the filter field."""
+    assert "name__startswith" in FilterModel.model_fields
+
+
+def test_str_istartswith_filter_generated() -> None:
+    """str field with istartswith operator should generate the filter field."""
+    assert "name__istartswith" in FilterModel.model_fields
+
+
+def test_str_endswith_filter_generated() -> None:
+    """str field with endswith operator should generate the filter field."""
+    assert "name__endswith" in FilterModel.model_fields
+
+
+def test_str_iendswith_filter_generated() -> None:
+    """str field with iendswith operator should generate the filter field."""
+    assert "name__iendswith" in FilterModel.model_fields
 
 
 def test_str_in_filter_generated() -> None:
@@ -185,6 +215,36 @@ def test_str_icontains_accepts_unicode_substring() -> None:
     """icontains should handle unicode substrings correctly."""
     instance = FilterModel(**{"name__icontains": "日本"})
     assert instance.name__icontains == "日本"
+
+
+def test_str_contains_accepts_plain_string() -> None:
+    """contains should accept a plain string."""
+    instance = FilterModel(**{"name__contains": "Ali"})
+    assert instance.name__contains == "Ali"
+
+
+def test_str_startswith_accepts_plain_string() -> None:
+    """startswith should accept a plain string."""
+    instance = FilterModel(**{"name__startswith": "John"})
+    assert instance.name__startswith == "John"
+
+
+def test_str_istartswith_accepts_plain_string() -> None:
+    """istartswith should accept a plain string."""
+    instance = FilterModel(**{"name__istartswith": "john"})
+    assert instance.name__istartswith == "john"
+
+
+def test_str_endswith_accepts_plain_string() -> None:
+    """endswith should accept a plain string."""
+    instance = FilterModel(**{"name__endswith": "Doe"})
+    assert instance.name__endswith == "Doe"
+
+
+def test_str_iendswith_accepts_plain_string() -> None:
+    """iendswith should accept a plain string."""
+    instance = FilterModel(**{"name__iendswith": "doe"})
+    assert instance.name__iendswith == "doe"
 
 
 # ---------------------------------------------------------------------------
