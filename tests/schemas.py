@@ -13,7 +13,19 @@ class TeamOut(BaseModel):
 
 class UserOut(BaseModel):
     id: int = Field(json_schema_extra={"filters": ["eq", "in"]})
-    name: str = Field(json_schema_extra={"filters": ["eq", "icontains"]})
+    name: str = Field(
+        json_schema_extra={
+            "filters": [
+                "eq",
+                "icontains",
+                "contains",
+                "startswith",
+                "istartswith",
+                "endswith",
+                "iendswith",
+            ]
+        }
+    )
     email: EmailStr = Field(json_schema_extra={"filters": ["eq", "icontains"]})
     age: int = Field(json_schema_extra={"filters": ["eq", "gte", "lte"]})
     profile_bio: str | None = Field(
@@ -48,7 +60,15 @@ class PostOut(BaseModel):
     title: str = Field(
         alias="post_title",
         json_schema_extra={
-            "filters": ["eq", "icontains"],
+            "filters": [
+                "eq",
+                "icontains",
+                "contains",
+                "startswith",
+                "istartswith",
+                "endswith",
+                "iendswith",
+            ],
             "filter_alias": "post_title",
         },
     )

@@ -104,6 +104,31 @@ def client(seeded_db: Session) -> Generator[TestClient, None, None]:
             "Colonel,Major",
             {"Medical supplies inventory"},
         ),
+        (
+            "f_post_title__startswith",
+            "Mission",
+            {"Mission to Abydos"},
+        ),
+        (
+            "f_post_title__istartswith",
+            "mission",
+            {"Mission to Abydos"},
+        ),
+        (
+            "f_post_title__endswith",
+            "Abydos",
+            {"Mission to Abydos"},
+        ),
+        (
+            "f_post_title__iendswith",
+            "abydos",
+            {"Mission to Abydos"},
+        ),
+        (
+            "f_post_title__contains",
+            "Abydos",
+            {"Mission to Abydos"},
+        ),
     ],
 )
 def test_e2e_str_field_all_valid_operators(

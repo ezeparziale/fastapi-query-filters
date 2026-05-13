@@ -48,7 +48,15 @@ class PostOut(BaseModel):
     title: str = Field(
         alias="post_title",
         json_schema_extra={
-            "filters": ["eq", "icontains"],
+            "filters": [
+                "eq",
+                "icontains",
+                "contains",
+                "startswith",
+                "istartswith",
+                "endswith",
+                "iendswith",
+            ],
             "filter_alias": "post_title",
         },
     )

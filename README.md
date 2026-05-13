@@ -148,6 +148,11 @@ The library supports the following filter operators for different field types:
 | `like` | SQL LIKE pattern | `name__like=%john%` | str |
 | `ilike` | SQL ILIKE (case-insensitive) | `email__ilike=%gmail%` | str |
 | `icontains` | Case-insensitive contains | `title__icontains=python` | str |
+| `contains` | Case-sensitive contains | `title__contains=Python` | str |
+| `startswith` | Starts with | `name__startswith=John` | str |
+| `istartswith` | Case-insensitive starts with | `name__istartswith=john` | str |
+| `endswith` | Ends with | `name__endswith=Doe` | str |
+| `iendswith` | Case-insensitive ends with | `name__iendswith=doe` | str |
 | `isnull` | Check if value is NULL or NOT NULL (supports boolean-like values: true/false, yes/no, 1/0, etc.) | `status__isnull=true` | all |
 
 ## FilterConfig Configuration
