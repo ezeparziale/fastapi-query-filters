@@ -15,6 +15,11 @@ class FilterOperator(StrEnum):
     LIKE = "like"
     ILIKE = "ilike"
     ICONTAINS = "icontains"
+    CONTAINS = "contains"
+    STARTSWITH = "startswith"
+    ISTARTSWITH = "istartswith"
+    ENDSWITH = "endswith"
+    IENDSWITH = "iendswith"
     IN = "in"
     NOT_IN = "not_in"
     ISNULL = "isnull"
@@ -49,6 +54,11 @@ DEFAULT_OPERATORS: dict[Any, list[FilterOperator]] = {
         FilterOperator.LIKE,
         FilterOperator.ILIKE,
         FilterOperator.ICONTAINS,
+        FilterOperator.CONTAINS,
+        FilterOperator.STARTSWITH,
+        FilterOperator.ISTARTSWITH,
+        FilterOperator.ENDSWITH,
+        FilterOperator.IENDSWITH,
         FilterOperator.IN,
         FilterOperator.NOT_IN,
         FilterOperator.ISNULL,

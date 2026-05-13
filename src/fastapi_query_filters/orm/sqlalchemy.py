@@ -297,6 +297,16 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
             return column.ilike(value)
         elif op == FilterOperator.ICONTAINS:
             return column.ilike(f"%{value}%")
+        elif op == FilterOperator.CONTAINS:
+            return column.contains(value)
+        elif op == FilterOperator.STARTSWITH:
+            return column.startswith(value)
+        elif op == FilterOperator.ISTARTSWITH:
+            return column.ilike(f"{value}%")
+        elif op == FilterOperator.ENDSWITH:
+            return column.endswith(value)
+        elif op == FilterOperator.IENDSWITH:
+            return column.ilike(f"%{value}")
         elif op == FilterOperator.IN:
             val_list = value if isinstance(value, list) else [value]
             return column.in_(val_list)
