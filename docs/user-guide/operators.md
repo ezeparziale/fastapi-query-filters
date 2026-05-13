@@ -19,6 +19,11 @@ When you use a filter like `age__gt=18`, the library splits it into the field (`
 | `like` | `col LIKE :val` | `str` | SQL LIKE (case-sensitive) |
 | `ilike` | `col ILIKE :val` | `str` | SQL ILIKE (case-insensitive) |
 | `icontains` | `col ILIKE '%val%'` | `str` | Case-insensitive substring match |
+| `contains` | `col LIKE '%val%'` | `str` | Case-sensitive substring match |
+| `startswith` | `col LIKE 'val%'` | `str` | Starts with (case-sensitive) |
+| `istartswith` | `col ILIKE 'val%'` | `str` | Starts with (case-insensitive) |
+| `endswith` | `col LIKE '%val'` | `str` | Ends with (case-sensitive) |
+| `iendswith` | `col ILIKE '%val'` | `str` | Ends with (case-insensitive) |
 | `in` | `col IN (...)` | All | Match any value in a list |
 | `not_in` | `col NOT IN (...)` | All | Match none of the values in a list |
 | `isnull` | `col IS NULL` | All | Check for NULL (expects a boolean-like value) |
@@ -57,6 +62,11 @@ This explicit approach ensures your API doesn't expose more filters than intende
 
 ### Case-Insensitive Search
 `GET /posts?author__icontains=doe` -> `SELECT ... WHERE author ILIKE '%doe%'`
+
+### Advanced Text Search
+- **Starts with**: `GET /posts?title__startswith=Hello` -> `SELECT ... WHERE title LIKE 'Hello%'`
+- **Ends with**: `GET /posts?email__iendswith=gmail.com` -> `SELECT ... WHERE email ILIKE '%gmail.com'`
+- **Contains (Sensitive)**: `GET /posts?content__contains=Python` -> `SELECT ... WHERE content LIKE '%Python%'`
 
 ---
 
