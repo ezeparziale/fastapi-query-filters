@@ -23,6 +23,8 @@ class FilterOperator(StrEnum):
     IN = "in"
     NOT_IN = "not_in"
     ISNULL = "isnull"
+    NOT_ISNULL = "not_isnull"
+    BETWEEN = "between"
 
 
 # Mapping of Python types to their default allowed filter operators.
@@ -38,6 +40,8 @@ DEFAULT_OPERATORS: dict[Any, list[FilterOperator]] = {
         FilterOperator.IN,
         FilterOperator.NOT_IN,
         FilterOperator.ISNULL,
+        FilterOperator.NOT_ISNULL,
+        FilterOperator.BETWEEN,
     ],
     float: [
         FilterOperator.EQ,
@@ -47,6 +51,8 @@ DEFAULT_OPERATORS: dict[Any, list[FilterOperator]] = {
         FilterOperator.GTE,
         FilterOperator.LTE,
         FilterOperator.ISNULL,
+        FilterOperator.NOT_ISNULL,
+        FilterOperator.BETWEEN,
     ],
     str: [
         FilterOperator.EQ,
@@ -62,8 +68,15 @@ DEFAULT_OPERATORS: dict[Any, list[FilterOperator]] = {
         FilterOperator.IN,
         FilterOperator.NOT_IN,
         FilterOperator.ISNULL,
+        FilterOperator.NOT_ISNULL,
+        FilterOperator.BETWEEN,
     ],
-    bool: [FilterOperator.EQ, FilterOperator.NE, FilterOperator.ISNULL],
+    bool: [
+        FilterOperator.EQ,
+        FilterOperator.NE,
+        FilterOperator.ISNULL,
+        FilterOperator.NOT_ISNULL,
+    ],
     date: [
         FilterOperator.EQ,
         FilterOperator.NE,
@@ -74,6 +87,8 @@ DEFAULT_OPERATORS: dict[Any, list[FilterOperator]] = {
         FilterOperator.IN,
         FilterOperator.NOT_IN,
         FilterOperator.ISNULL,
+        FilterOperator.NOT_ISNULL,
+        FilterOperator.BETWEEN,
     ],
     datetime: [
         FilterOperator.EQ,
@@ -85,6 +100,8 @@ DEFAULT_OPERATORS: dict[Any, list[FilterOperator]] = {
         FilterOperator.IN,
         FilterOperator.NOT_IN,
         FilterOperator.ISNULL,
+        FilterOperator.NOT_ISNULL,
+        FilterOperator.BETWEEN,
     ],
     time: [
         FilterOperator.EQ,
@@ -96,5 +113,7 @@ DEFAULT_OPERATORS: dict[Any, list[FilterOperator]] = {
         FilterOperator.IN,
         FilterOperator.NOT_IN,
         FilterOperator.ISNULL,
+        FilterOperator.NOT_ISNULL,
+        FilterOperator.BETWEEN,
     ],
 }

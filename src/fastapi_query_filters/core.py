@@ -113,6 +113,40 @@ class FilterBase(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
+    def validate_between_operators(cls, data: Any) -> Any:
+        """Ensures that 'between' filters have exactly two elements."""
+        if not isinstance(data, dict):
+            return data
+
+        for key, value in data.items():
+            if key.endswith("__between") and value is not None:
+                items: list[Any]
+                # Extract values from string or list
+                if isinstance(value, str):
+                    items = [v.strip() for v in value.split(",")]
+                elif (
+                    isinstance(value, list)
+                    and len(value) == 1
+                    and isinstance(value[0], str)
+                    and "," in value[0]
+                ):
+                    # Handle the case where we have a list with one string containing a comma
+                    # (e.g., ["10,50"])
+                    items = [v.strip() for v in value[0].split(",")]
+                elif isinstance(value, list):
+                    items = value
+                else:
+                    items = [value]
+
+                if len(items) != 2:
+                    raise ValueError(
+                        f"Field '{key}' must have exactly two values for 'between' operator. "
+                        f"Got {len(items)}: {items}"
+                    )
+        return data
+
+    @model_validator(mode="before")
+    @classmethod
     def validate_strict_filters(cls, data: Any) -> Any:
         """Validates that no unknown query parameters are provided if strict mode is enabled."""
         if not isinstance(data, dict):
@@ -310,10 +344,14 @@ def _fields_from_schema(
 
             # Type mapping: Partial string matches use 'str', others use original type
             field_filter_type: Any
-            if op == FilterOperator.ISNULL:
+            if op in (FilterOperator.ISNULL, FilterOperator.NOT_ISNULL):
                 field_filter_type = bool | None
-            elif op in (FilterOperator.IN, FilterOperator.NOT_IN):
-                field_filter_type = str | list[actual_type] | None  # type: ignore[valid-type]
+            elif op in (
+                FilterOperator.IN,
+                FilterOperator.NOT_IN,
+                FilterOperator.BETWEEN,
+            ):
+                field_filter_type = list[actual_type] | None  # type: ignore[valid-type]
             elif op in STRING_OPS:
                 field_filter_type = str | None
             else:
