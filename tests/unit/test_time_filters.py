@@ -10,7 +10,19 @@ from fastapi_query_filters.dependencies import FilterValues
 class ScheduleOut(BaseModel):
     start_time: time = Field(
         json_schema_extra={
-            "filters": ["eq", "ne", "gt", "lt", "gte", "lte", "in", "not_in", "isnull"]
+            "filters": [
+                "eq",
+                "ne",
+                "gt",
+                "lt",
+                "gte",
+                "lte",
+                "in",
+                "not_in",
+                "isnull",
+                "not_isnull",
+                "between",
+            ]
         }
     )
 
@@ -68,6 +80,16 @@ def test_time_not_in_filter_generated() -> None:
 def test_time_isnull_filter_generated() -> None:
     """time field with isnull operator should generate the filter field."""
     assert "start_time__isnull" in FilterModel.model_fields
+
+
+def test_time_not_isnull_filter_generated() -> None:
+    """time field with not_isnull operator should generate the filter field."""
+    assert "start_time__not_isnull" in FilterModel.model_fields
+
+
+def test_time_between_filter_generated() -> None:
+    """time field with between operator should generate the filter field."""
+    assert "start_time__between" in FilterModel.model_fields
 
 
 # ---------------------------------------------------------------------------
@@ -310,6 +332,101 @@ def test_time_isnull_accepts_none() -> None:
     """isnull set to None should be treated as not provided."""
     instance = FilterModel(**{"start_time__isnull": None})
     assert instance.start_time__isnull is None
+
+
+# ---------------------------------------------------------------------------
+# not_isnull
+# ---------------------------------------------------------------------------
+
+
+def test_time_not_isnull_accepts_true() -> None:
+    """not_isnull=True should filter for NOT NULL values."""
+    instance = FilterModel(**{"start_time__not_isnull": True})
+    assert instance.start_time__not_isnull is True
+
+
+def test_time_not_isnull_accepts_false() -> None:
+    """not_isnull=False should filter for NULL values."""
+    instance = FilterModel(**{"start_time__not_isnull": False})
+    assert instance.start_time__not_isnull is False
+
+
+def test_time_not_isnull_accepts_string_true() -> None:
+    """not_isnull should coerce string 'true' to True."""
+    instance = FilterModel(**{"start_time__not_isnull": "true"})
+    assert instance.start_time__not_isnull is True
+
+
+def test_time_not_isnull_accepts_string_false() -> None:
+    """not_isnull should coerce string 'false' to False."""
+    instance = FilterModel(**{"start_time__not_isnull": "false"})
+    assert instance.start_time__not_isnull is False
+
+
+def test_time_not_isnull_accepts_string_1() -> None:
+    """not_isnull should coerce string '1' to True."""
+    instance = FilterModel(**{"start_time__not_isnull": "1"})
+    assert instance.start_time__not_isnull is True
+
+
+def test_time_not_isnull_accepts_string_0() -> None:
+    """not_isnull should coerce string '0' to False."""
+    instance = FilterModel(**{"start_time__not_isnull": "0"})
+    assert instance.start_time__not_isnull is False
+
+
+def test_time_not_isnull_accepts_int_1() -> None:
+    """not_isnull should coerce integer 1 to True."""
+    instance = FilterModel(**{"start_time__not_isnull": 1})
+    assert instance.start_time__not_isnull is True
+
+
+def test_time_not_isnull_accepts_int_0() -> None:
+    """not_isnull should coerce integer 0 to False."""
+    instance = FilterModel(**{"start_time__not_isnull": 0})
+    assert instance.start_time__not_isnull is False
+
+
+def test_time_not_isnull_rejects_arbitrary_string() -> None:
+    """not_isnull should reject arbitrary strings that don't represent a boolean."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"start_time__not_isnull": "active"})
+
+
+def test_time_not_isnull_rejects_integer_2() -> None:
+    """not_isnull should reject integers other than 0 and 1."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"start_time__not_isnull": 2})
+
+
+def test_time_not_isnull_accepts_none() -> None:
+    """not_isnull set to None should be treated as not provided."""
+    instance = FilterModel(**{"start_time__not_isnull": None})
+    assert instance.start_time__not_isnull is None
+
+
+# ---------------------------------------------------------------------------
+# between
+# ---------------------------------------------------------------------------
+
+
+def test_time_between_accepts_time_objects() -> None:
+    """between should accept a list of two time objects."""
+    times = [time(8, 0, 0), time(18, 0, 0)]
+    instance = FilterModel(**{"start_time__between": times})
+    assert instance.start_time__between == times
+
+
+def test_time_between_accepts_iso_strings() -> None:
+    """between should parse a comma-separated string with two time values."""
+    instance = FilterModel(**{"start_time__between": "08:00:00,18:00:00"})
+    assert instance.start_time__between == [time(8, 0, 0), time(18, 0, 0)]
+
+
+def test_time_between_rejects_invalid_count() -> None:
+    """between should reject lists that don't have exactly two elements."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"start_time__between": ["08:00:00"]})
 
 
 # ---------------------------------------------------------------------------

@@ -10,7 +10,19 @@ from fastapi_query_filters.dependencies import FilterValues
 class EventOut(BaseModel):
     start_date: date = Field(
         json_schema_extra={
-            "filters": ["eq", "ne", "gt", "lt", "gte", "lte", "in", "not_in", "isnull"]
+            "filters": [
+                "eq",
+                "ne",
+                "gt",
+                "lt",
+                "gte",
+                "lte",
+                "in",
+                "not_in",
+                "isnull",
+                "not_isnull",
+                "between",
+            ]
         }
     )
 
@@ -68,6 +80,16 @@ def test_date_not_in_filter_generated() -> None:
 def test_date_isnull_filter_generated() -> None:
     """date field with isnull operator should generate the filter field."""
     assert "start_date__isnull" in FilterModel.model_fields
+
+
+def test_date_not_isnull_filter_generated() -> None:
+    """date field with not_isnull operator should generate the filter field."""
+    assert "start_date__not_isnull" in FilterModel.model_fields
+
+
+def test_date_between_filter_generated() -> None:
+    """date field with between operator should generate the filter field."""
+    assert "start_date__between" in FilterModel.model_fields
 
 
 # ---------------------------------------------------------------------------
@@ -300,6 +322,101 @@ def test_date_isnull_accepts_none() -> None:
     """isnull set to None should be treated as not provided."""
     instance = FilterModel(**{"start_date__isnull": None})
     assert instance.start_date__isnull is None
+
+
+# ---------------------------------------------------------------------------
+# not_isnull
+# ---------------------------------------------------------------------------
+
+
+def test_date_not_isnull_accepts_true() -> None:
+    """not_isnull=True should filter for NOT NULL values."""
+    instance = FilterModel(**{"start_date__not_isnull": True})
+    assert instance.start_date__not_isnull is True
+
+
+def test_date_not_isnull_accepts_false() -> None:
+    """not_isnull=False should filter for NULL values."""
+    instance = FilterModel(**{"start_date__not_isnull": False})
+    assert instance.start_date__not_isnull is False
+
+
+def test_date_not_isnull_accepts_string_true() -> None:
+    """not_isnull should coerce string 'true' to True."""
+    instance = FilterModel(**{"start_date__not_isnull": "true"})
+    assert instance.start_date__not_isnull is True
+
+
+def test_date_not_isnull_accepts_string_false() -> None:
+    """not_isnull should coerce string 'false' to False."""
+    instance = FilterModel(**{"start_date__not_isnull": "false"})
+    assert instance.start_date__not_isnull is False
+
+
+def test_date_not_isnull_accepts_string_1() -> None:
+    """not_isnull should coerce string '1' to True."""
+    instance = FilterModel(**{"start_date__not_isnull": "1"})
+    assert instance.start_date__not_isnull is True
+
+
+def test_date_not_isnull_accepts_string_0() -> None:
+    """not_isnull should coerce string '0' to False."""
+    instance = FilterModel(**{"start_date__not_isnull": "0"})
+    assert instance.start_date__not_isnull is False
+
+
+def test_date_not_isnull_accepts_int_1() -> None:
+    """not_isnull should coerce integer 1 to True."""
+    instance = FilterModel(**{"start_date__not_isnull": 1})
+    assert instance.start_date__not_isnull is True
+
+
+def test_date_not_isnull_accepts_int_0() -> None:
+    """not_isnull should coerce integer 0 to False."""
+    instance = FilterModel(**{"start_date__not_isnull": 0})
+    assert instance.start_date__not_isnull is False
+
+
+def test_date_not_isnull_rejects_arbitrary_string() -> None:
+    """not_isnull should reject arbitrary strings that don't represent a boolean."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"start_date__not_isnull": "active"})
+
+
+def test_date_not_isnull_rejects_integer_2() -> None:
+    """not_isnull should reject integers other than 0 and 1."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"start_date__not_isnull": 2})
+
+
+def test_date_not_isnull_accepts_none() -> None:
+    """not_isnull set to None should be treated as not provided."""
+    instance = FilterModel(**{"start_date__not_isnull": None})
+    assert instance.start_date__not_isnull is None
+
+
+# ---------------------------------------------------------------------------
+# between
+# ---------------------------------------------------------------------------
+
+
+def test_date_between_accepts_date_objects() -> None:
+    """between should accept a list of two date objects."""
+    dates = [date(2024, 1, 1), date(2024, 12, 31)]
+    instance = FilterModel(**{"start_date__between": dates})
+    assert instance.start_date__between == dates
+
+
+def test_date_between_accepts_iso_strings() -> None:
+    """between should parse a comma-separated string with two ISO dates."""
+    instance = FilterModel(**{"start_date__between": "2024-01-01,2024-12-31"})
+    assert instance.start_date__between == [date(2024, 1, 1), date(2024, 12, 31)]
+
+
+def test_date_between_rejects_invalid_count() -> None:
+    """between should reject lists that don't have exactly two elements."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"start_date__between": ["2024-01-01"]})
 
 
 # ---------------------------------------------------------------------------
