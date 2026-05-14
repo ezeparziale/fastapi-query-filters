@@ -212,3 +212,59 @@ def test_apply_filters_advanced_text_operators(seeded_db: Session) -> None:
     # In SQLite, this will likely be 1. In Postgres, 0.
     # Given our CI uses SQLite, we don't assert 0 here to avoid flaky tests,
     # but we've exercised the code path.
+
+
+def test_apply_filters_between_operator(seeded_db: Session) -> None:
+    """Test the between operator with various ranges."""
+
+    class BetweenSchema(BaseModel):
+        age: int = Field(json_schema_extra={"filters": ["between"]})
+
+    FilterModel = create_filter_model(BetweenSchema)
+
+    # between (35 to 45) -> Sam (35), Janet (38), Jack (45)
+    filters = FilterValues(FilterModel(age__between=[35, 45]))
+    stmt = apply_filters(select(User), User, filters)
+    results = seeded_db.execute(stmt).scalars().all()
+    assert len(results) == 3
+
+    # between (inclusive boundary check: 38 to 45) -> Janet (38), Jack (45)
+    filters = FilterValues(FilterModel(age__between=[38, 45]))
+    stmt = apply_filters(select(User), User, filters)
+    results = seeded_db.execute(stmt).scalars().all()
+    assert len(results) == 2
+
+    # between (no matches: 200 to 300)
+    filters = FilterValues(FilterModel(age__between=[200, 300]))
+    stmt = apply_filters(select(User), User, filters)
+    results = seeded_db.execute(stmt).scalars().all()
+    assert len(results) == 0
+
+
+def test_apply_filters_not_isnull_operator(seeded_db: Session) -> None:
+    """Test the not_isnull operator using the casualties field from Post."""
+    from tests.models import Post
+
+    class NotNullSchema(BaseModel):
+        casualties: int = Field(json_schema_extra={"filters": ["not_isnull"]})
+
+    FilterModel = create_filter_model(NotNullSchema)
+
+    # 4 posts total:
+    # 1. Abydos: casualties=0
+    # 2. Chulak: casualties=1
+    # 3. Medical inventory: casualties=None
+    # 4. Asgard (deleted): casualties=0
+
+    # not_isnull=True (Abydos, Chulak, Asgard have casualties defined)
+    filters = FilterValues(FilterModel(casualties__not_isnull=True))
+    stmt = apply_filters(select(Post), Post, filters)
+    results = seeded_db.execute(stmt).scalars().all()
+    assert len(results) == 3
+
+    # not_isnull=False (inverse of not null -> null; only Medical inventory has NULL casualties)
+    filters = FilterValues(FilterModel(casualties__not_isnull=False))
+    stmt = apply_filters(select(Post), Post, filters)
+    results = seeded_db.execute(stmt).scalars().all()
+    assert len(results) == 1
+    assert results[0].title == "Medical supplies inventory"
