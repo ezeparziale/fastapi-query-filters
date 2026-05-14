@@ -51,7 +51,9 @@ class PostFilterExtra(BaseModel):
     # Virtual field to filter by author's age range even if not directly in PostOut top-level
     author__age: int | None = Field(
         default=None,
-        json_schema_extra={"filters": ["gt", "lt", "gte", "lte", "in", "not_in"]},
+        json_schema_extra={
+            "filters": ["gt", "lt", "gte", "lte", "in", "not_in", "between"]
+        },
     )
 
 
@@ -68,36 +70,47 @@ class PostOut(BaseModel):
                 "istartswith",
                 "endswith",
                 "iendswith",
+                "between",
             ],
             "filter_alias": "post_title",
         },
     )
     description: str | None = Field(None, json_schema_extra={})
     is_active: bool = Field(
-        json_schema_extra={"filters": ["eq", "ne", "gte", "isnull"]}
+        json_schema_extra={"filters": ["eq", "ne", "gte", "isnull", "not_isnull"]}
     )
     gate_address: str | None = Field(
         None,
         pattern=r"^[A-Z0-9]{3}-[A-Z0-9]{3,4}$",
-        json_schema_extra={"filters": ["eq", "icontains", "isnull"]},
+        json_schema_extra={
+            "filters": ["eq", "icontains", "isnull", "not_isnull", "between"]
+        },
     )
     casualties: int | None = Field(
-        None, json_schema_extra={"filters": ["eq", "gte", "isnull"]}
+        None,
+        json_schema_extra={"filters": ["eq", "gte", "isnull", "not_isnull", "between"]},
     )
     success_rate: float | None = Field(
-        None, json_schema_extra={"filters": ["gte", "lte"]}
+        None, json_schema_extra={"filters": ["gte", "lte", "between"]}
     )
     mission_report_url: HttpUrl | None = Field(
-        None, json_schema_extra={"filters": ["eq", "isnull"]}
+        None, json_schema_extra={"filters": ["eq", "isnull", "not_isnull"]}
     )
     mission_date: date | None = Field(
-        None, json_schema_extra={"filters": ["eq", "gte", "lte", "in", "isnull"]}
+        None,
+        json_schema_extra={
+            "filters": ["eq", "gte", "lte", "in", "isnull", "not_isnull", "between"]
+        },
     )
     mission_start: datetime | None = Field(
-        None, json_schema_extra={"filters": ["gte", "lte", "isnull"]}
+        None,
+        json_schema_extra={
+            "filters": ["gte", "lte", "isnull", "not_isnull", "between"]
+        },
     )
     incident_time: time | None = Field(
-        None, json_schema_extra={"filters": ["eq", "gte", "lte", "isnull"]}
+        None,
+        json_schema_extra={"filters": ["eq", "gte", "lte", "isnull", "not_isnull"]},
     )
     created_at: datetime = Field(json_schema_extra={"filters": ["gte", "lte"]})
     updated_at: datetime
