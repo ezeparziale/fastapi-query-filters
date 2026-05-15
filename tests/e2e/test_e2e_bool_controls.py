@@ -259,3 +259,32 @@ def test_e2e_bool_prefix_and_strict_variants(client: TestClient) -> None:
         "/posts-no-prefix-nonstrict", params={"is_active__eq": "true", "foo": "bar"}
     )
     assert response.status_code == 200
+
+
+@pytest.mark.parametrize(
+    ("value", "expected_count"),
+    [
+        ("true", 4),  # all 4 are NOT NULL
+        ("false", 0),  # all are NOT NULL, so none are NULL
+        ("1", 4),
+        ("0", 0),
+        ("yes", 4),
+        ("no", 0),
+    ],
+)
+def test_e2e_bool_not_isnull_exhaustive(
+    client: TestClient, value: str, expected_count: int
+) -> None:
+    """Validate not_isnull operator for boolean fields with various truthy/falsy values."""
+    response = client.get("/posts", params={"f_is_active__not_isnull": value})
+    assert response.status_code == 200
+    assert len(response.json()) == expected_count
+
+
+@pytest.mark.parametrize("value", ["active", "1.1", "-1"])
+def test_e2e_bool_not_isnull_invalid_returns_422(
+    client: TestClient, value: str
+) -> None:
+    """Invalid values for not_isnull should return 422."""
+    response = client.get("/posts", params={"f_is_active__not_isnull": value})
+    assert response.status_code == 422

@@ -449,3 +449,78 @@ def test_e2e_int_author_age_not_in_nested(client: TestClient) -> None:
     titles = {_post_title(item) for item in response.json()}
     # Jack (age 45) has 2 posts — both excluded; Sam and Janet remain
     assert titles == {"Encounter in Chulak", "Medical supplies inventory"}
+
+
+@pytest.mark.parametrize(
+    ("value", "expected_count"),
+    [
+        ("true", 3),  # Abydos, Chulak, Asgard
+        ("false", 1),  # Medical inventory
+        ("1", 3),
+        ("0", 1),
+        ("yes", 3),
+        ("no", 1),
+        ("y", 3),
+        ("n", 1),
+    ],
+)
+def test_e2e_int_not_isnull_exhaustive(
+    client: TestClient, value: str, expected_count: int
+) -> None:
+    """Validate not_isnull operator end-to-end using casualties field with various boolean representations."""
+    response = client.get("/posts", params={"f_casualties__not_isnull": value})
+    assert response.status_code == 200
+    assert len(response.json()) == expected_count
+
+
+def test_e2e_int_not_isnull_invalid_returns_422(client: TestClient) -> None:
+    """Invalid boolean values for not_isnull yield 422."""
+    response = client.get("/posts", params={"f_casualties__not_isnull": "not-a-bool"})
+    assert response.status_code == 422
+
+
+def test_e2e_int_between_operator(client: TestClient) -> None:
+    """Validate between operator end-to-end using virtual author__age field."""
+    # Seed: Samantha Carter 35, Janet Fraiser 38, Jack O'Neill 45.
+    # author__age between 35 and 40 -> Sam and Janet.
+    response = client.get("/posts", params={"f_author__age__between": "35,40"})
+    assert response.status_code == 200
+    titles = {_post_title(item) for item in response.json()}
+    assert titles == {"Encounter in Chulak", "Medical supplies inventory"}
+
+    # author__age between 40 and 50 -> Jack (45).
+    response = client.get("/posts", params={"f_author__age__between": "40,50"})
+    assert response.status_code == 200
+    titles = {_post_title(item) for item in response.json()}
+    assert titles == {"Mission to Abydos", "Contact with Asgard (Classified/Deleted)"}
+
+
+def test_e2e_int_between_casualties(client: TestClient) -> None:
+    """Validate between operator for casualties field."""
+    # Seed: Abydos (0), Chulak (1), Asgard (0), Medical (NULL)
+    # between 0 and 0 -> Abydos (0), Asgard (0)
+    response = client.get("/posts", params={"f_casualties__between": "0,0"})
+    assert response.status_code == 200
+    titles = {_post_title(item) for item in response.json()}
+    assert titles == {"Mission to Abydos", "Contact with Asgard (Classified/Deleted)"}
+
+    # between 0 and 1 -> Abydos, Chulak, Asgard
+    response = client.get("/posts", params={"f_casualties__between": "0,1"})
+    assert response.status_code == 200
+    assert len(response.json()) == 3
+
+
+def test_e2e_float_between_success_rate(client: TestClient) -> None:
+    """Validate between operator for success_rate (float) field."""
+    # Seed: Abydos (99.9), Chulak (85.5), Asgard (100.0), Medical (NULL)
+    # between 90 and 100 -> Abydos (99.9), Asgard (100.0)
+    response = client.get("/posts", params={"f_success_rate__between": "90,100"})
+    assert response.status_code == 200
+    titles = {_post_title(item) for item in response.json()}
+    assert titles == {"Mission to Abydos", "Contact with Asgard (Classified/Deleted)"}
+
+    # between 80 and 90 -> Chulak (85.5)
+    response = client.get("/posts", params={"f_success_rate__between": "80,90"})
+    assert response.status_code == 200
+    titles = {_post_title(item) for item in response.json()}
+    assert titles == {"Encounter in Chulak"}

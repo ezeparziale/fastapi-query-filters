@@ -156,3 +156,33 @@ def test_e2e_time_disallowed_operator_returns_422(client: TestClient) -> None:
     """Time fields do not support string operators like icontains."""
     response = client.get("/posts", params={"f_incident_time__icontains": "10"})
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("value", "expected_count"),
+    [
+        ("true", 4),  # all posts have incident_time
+        ("false", 0),
+        ("1", 4),
+        ("0", 0),
+        ("yes", 4),
+        ("no", 0),
+        ("y", 4),
+        ("n", 0),
+    ],
+)
+def test_e2e_time_not_isnull_exhaustive(
+    client: TestClient, value: str, expected_count: int
+) -> None:
+    """Validate not_isnull operator for time fields with various boolean representations."""
+    response = client.get("/posts", params={"f_incident_time__not_isnull": value})
+    assert response.status_code == 200
+    assert len(response.json()) == expected_count
+
+
+def test_e2e_time_not_isnull_invalid_returns_422(client: TestClient) -> None:
+    """Invalid boolean values for not_isnull yield 422."""
+    response = client.get(
+        "/posts", params={"f_incident_time__not_isnull": "not-a-bool"}
+    )
+    assert response.status_code == 422

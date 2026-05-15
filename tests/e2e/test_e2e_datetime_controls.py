@@ -158,3 +158,106 @@ def test_e2e_datetime_disallowed_operator_returns_422(client: TestClient) -> Non
     """Datetime fields do not support string operators like icontains."""
     response = client.get("/posts", params={"f_mission_start__icontains": "1997"})
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("value", "expected_count"),
+    [
+        ("true", 4),  # all posts have mission_start
+        ("false", 0),
+        ("1", 4),
+        ("0", 0),
+        ("yes", 4),
+        ("no", 0),
+        ("y", 4),
+        ("n", 0),
+    ],
+)
+def test_e2e_datetime_not_isnull_exhaustive(
+    client: TestClient, value: str, expected_count: int
+) -> None:
+    """Validate not_isnull operator for datetime fields with various boolean representations."""
+    response = client.get("/posts", params={"f_mission_start__not_isnull": value})
+    assert response.status_code == 200
+    assert len(response.json()) == expected_count
+
+
+def test_e2e_datetime_not_isnull_invalid_returns_422(client: TestClient) -> None:
+    """Invalid boolean values for not_isnull yield 422."""
+    response = client.get(
+        "/posts", params={"f_mission_start__not_isnull": "not-a-bool"}
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("value", "expected_count", "expected_status"),
+    [
+        (
+            "1997-07-01T00:00:00Z,1997-08-16T00:00:00Z",
+            3,
+            200,
+        ),
+        (
+            "1997-09-01T00:00:00Z,1997-09-30T23:59:59Z",
+            1,
+            200,
+        ),
+        (
+            "2000-01-01T00:00:00Z,2000-01-02T00:00:00Z",
+            0,
+            200,
+        ),
+        (
+            "1997-07-01,1997-08-16",  # Date-only strings
+            3,
+            200,
+        ),
+        (
+            "1997-07-01T20:00:00,1997-08-16T00:00:00",  # Naïve datetimes (no Z)
+            3,
+            200,
+        ),
+        (
+            "1997-07-27 20:00:00,1997-08-15 09:00:00",  # Space separator
+            3,
+            200,
+        ),
+        (
+            "1997-07-27T20:00:00+00:00,1997-08-01T10:30:00+00:00",  # Explicit offset
+            2,
+            200,
+        ),
+        (
+            "1997-07-27T20:00:00.000Z,1997-07-27T20:00:00.999Z",  # Microseconds
+            1,
+            200,
+        ),
+        (
+            "2023-01-01,1997-01-01",  # Inverted range (lower > upper) -> Should return 0
+            0,
+            200,
+        ),
+        # Invalid formats
+        ("invalid-datetime,1997-08-01T00:00:00Z", 0, 422),
+        ("1997-07-27T20:00:00Z,invalid-datetime", 0, 422),
+        ("1997-13-01T00:00:00Z,1997-08-01T00:00:00Z", 0, 422),  # Invalid month
+        ("1997-07-27T20:00:00Z", 0, 422),  # Single value
+        (
+            "1997-07-27T20:00:00Z,1997-08-01T00:00:00Z,1997-08-15T00:00:00Z",
+            0,
+            422,
+        ),  # Three values
+    ],
+)
+def test_e2e_datetime_between_exhaustive(
+    client: TestClient,
+    value: str,
+    expected_count: int,
+    expected_status: int,
+) -> None:
+    """Validate between operator for datetime fields with various valid and invalid ranges."""
+    response = client.get("/posts", params={"f_mission_start__between": value})
+    assert response.status_code == expected_status
+    if expected_status == 200:
+        assert len(response.json()) == expected_count

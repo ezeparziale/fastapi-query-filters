@@ -459,3 +459,58 @@ def test_e2e_str_regex_validation_ignored(client: TestClient) -> None:
     response = client.get("/posts", params={"f_gate_address__eq": "P8X-412"})
     assert response.status_code == 200
     assert len(response.json()) == 1
+
+
+@pytest.mark.parametrize(
+    ("value", "expected_count"),
+    [
+        ("true", 3),  # Abydos, Chulak, Asgard
+        ("false", 1),  # Medical inventory
+        ("1", 3),
+        ("0", 1),
+        ("yes", 3),
+        ("no", 1),
+        ("y", 3),
+        ("n", 1),
+    ],
+)
+def test_e2e_str_not_isnull_exhaustive(
+    client: TestClient, value: str, expected_count: int
+) -> None:
+    """Validate not_isnull operator for string fields with various boolean representations."""
+    response = client.get("/posts", params={"f_gate_address__not_isnull": value})
+    assert response.status_code == 200
+    assert len(response.json()) == expected_count
+
+
+def test_e2e_str_not_isnull_invalid_returns_422(client: TestClient) -> None:
+    """Invalid values for not_isnull should return 422."""
+    response = client.get("/posts", params={"f_gate_address__not_isnull": "not-a-bool"})
+    assert response.status_code == 422
+
+
+def test_e2e_str_between_operator(client: TestClient) -> None:
+    """Validate between operator for string fields (lexicographical range)."""
+    # Seed post_titles:
+    # "Mission to Abydos"
+    # "Encounter in Chulak"
+    # "Medical supplies inventory"
+    # "Contact with Asgard (Classified/Deleted)"
+
+    # alphabetically:
+    # Contact...
+    # Encounter...
+    # Medical...
+    # Mission...
+
+    # between "A" and "F" -> "Contact", "Encounter"
+    response = client.get("/posts", params={"f_post_title__between": "A,F"})
+    assert response.status_code == 200
+    titles = {item.get("post_title") for item in response.json()}
+    assert titles == {"Contact with Asgard (Classified/Deleted)", "Encounter in Chulak"}
+
+    # between "Me" and "Mz" -> "Medical", "Mission"
+    response = client.get("/posts", params={"f_post_title__between": "Me,Mz"})
+    assert response.status_code == 200
+    titles = {item.get("post_title") for item in response.json()}
+    assert titles == {"Medical supplies inventory", "Mission to Abydos"}
