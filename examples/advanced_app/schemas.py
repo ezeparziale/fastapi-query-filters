@@ -13,11 +13,14 @@ class TeamOut(BaseModel):
 
 class UserOut(BaseModel):
     id: int = Field(json_schema_extra={"filters": ["eq"]})
-    name: str = Field(json_schema_extra={"filters": ["eq", "icontains"]})
+    name: str = Field(json_schema_extra={"filters": ["eq", "icontains", "between"]})
     email: EmailStr = Field(json_schema_extra={"filters": ["eq", "icontains"]})
-    age: int = Field(json_schema_extra={"filters": ["eq", "gte", "lte"]})
+    age: int = Field(
+        json_schema_extra={"filters": ["eq", "gte", "lte", "between", "in"]}
+    )
     profile_bio: str | None = Field(
-        None, json_schema_extra={"filters": ["eq", "icontains", "isnull"]}
+        None,
+        json_schema_extra={"filters": ["eq", "icontains", "isnull", "not_isnull"]},
     )
     rank: str = Field(json_schema_extra={"filters": ["eq", "in", "not_in"]})
     is_alien: bool = Field(json_schema_extra={"filters": ["eq", "isnull"]})
@@ -39,7 +42,7 @@ class PostFilterExtra(BaseModel):
     # Virtual field to filter by author's age range even if not directly in PostOut top-level
     author__age: int | None = Field(
         default=None,
-        json_schema_extra={"filters": ["gte", "lte", "in", "not_in"]},
+        json_schema_extra={"filters": ["gte", "lte", "in", "not_in", "between"]},
     )
 
 
@@ -77,13 +80,14 @@ class PostOut(BaseModel):
         None, json_schema_extra={"filters": ["eq", "isnull"]}
     )
     mission_date: date | None = Field(
-        None, json_schema_extra={"filters": ["eq", "gte", "lte", "in", "isnull"]}
+        None,
+        json_schema_extra={"filters": ["eq", "gte", "lte", "in", "isnull", "between"]},
     )
     mission_start: datetime | None = Field(
-        None, json_schema_extra={"filters": ["gte", "lte", "isnull"]}
+        None, json_schema_extra={"filters": ["gte", "lte", "isnull", "between"]}
     )
     incident_time: time | None = Field(
-        None, json_schema_extra={"filters": ["eq", "gte", "lte", "isnull"]}
+        None, json_schema_extra={"filters": ["eq", "gte", "lte", "isnull", "between"]}
     )
     created_at: datetime = Field(json_schema_extra={"filters": ["gte", "lte"]})
     updated_at: datetime
