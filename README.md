@@ -145,6 +145,7 @@ The library supports the following filter operators for different field types:
 | `lte` | Less than or equal | `price__lte=100` | int, datetime |
 | `in` | In list | `id__in=1,2,3` | all |
 | `not_in` | Not in list | `status__not_in=deleted,archived` | all |
+| `between` | Range (inclusive) | `age__between=18,65` | number, date, str |
 | `like` | SQL LIKE pattern | `name__like=%john%` | str |
 | `ilike` | SQL ILIKE (case-insensitive) | `email__ilike=%gmail%` | str |
 | `icontains` | Case-insensitive contains | `title__icontains=python` | str |
@@ -154,6 +155,7 @@ The library supports the following filter operators for different field types:
 | `endswith` | Ends with | `name__endswith=Doe` | str |
 | `iendswith` | Case-insensitive ends with | `name__iendswith=doe` | str |
 | `isnull` | Check if value is NULL or NOT NULL (supports boolean-like values: true/false, yes/no, 1/0, etc.) | `status__isnull=true` | all |
+| `not_isnull` | Inverse of isnull (semantically cleaner) | `status__not_isnull=true` | all |
 
 ## FilterConfig Configuration
 

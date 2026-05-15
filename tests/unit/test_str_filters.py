@@ -21,6 +21,8 @@ class UserOut(BaseModel):
                 "in",
                 "not_in",
                 "isnull",
+                "not_isnull",
+                "between",
             ]
         }
     )
@@ -99,6 +101,16 @@ def test_str_not_in_filter_generated() -> None:
 def test_str_isnull_filter_generated() -> None:
     """str field with isnull operator should generate the filter field."""
     assert "name__isnull" in FilterModel.model_fields
+
+
+def test_str_not_isnull_filter_generated() -> None:
+    """str field with not_isnull operator should generate the filter field."""
+    assert "name__not_isnull" in FilterModel.model_fields
+
+
+def test_str_between_filter_generated() -> None:
+    """str field with between operator should generate the filter field."""
+    assert "name__between" in FilterModel.model_fields
 
 
 # ---------------------------------------------------------------------------
@@ -363,6 +375,85 @@ def test_str_isnull_accepts_string_no() -> None:
     """isnull should coerce string 'no' to False."""
     instance = FilterModel(**{"name__isnull": "no"})
     assert instance.name__isnull is False
+
+
+# ---------------------------------------------------------------------------
+# not_isnull
+# ---------------------------------------------------------------------------
+
+
+def test_str_not_isnull_accepts_true() -> None:
+    """not_isnull=True should filter for NOT NULL values."""
+    instance = FilterModel(**{"name__not_isnull": True})
+    assert instance.name__not_isnull is True
+
+
+def test_str_not_isnull_accepts_false() -> None:
+    """not_isnull=False should filter for NULL values."""
+    instance = FilterModel(**{"name__not_isnull": False})
+    assert instance.name__not_isnull is False
+
+
+def test_str_not_isnull_accepts_string_true() -> None:
+    """not_isnull should coerce string 'true' to True."""
+    instance = FilterModel(**{"name__not_isnull": "true"})
+    assert instance.name__not_isnull is True
+
+
+def test_str_not_isnull_accepts_string_false() -> None:
+    """not_isnull should coerce string 'false' to False."""
+    instance = FilterModel(**{"name__not_isnull": "false"})
+    assert instance.name__not_isnull is False
+
+
+def test_str_not_isnull_accepts_int_1() -> None:
+    """not_isnull should coerce integer 1 to True."""
+    instance = FilterModel(**{"name__not_isnull": 1})
+    assert instance.name__not_isnull is True
+
+
+def test_str_not_isnull_accepts_int_0() -> None:
+    """not_isnull should coerce integer 0 to False."""
+    instance = FilterModel(**{"name__not_isnull": 0})
+    assert instance.name__not_isnull is False
+
+
+def test_str_not_isnull_accepts_string_yes() -> None:
+    """not_isnull should coerce string 'yes' to True."""
+    instance = FilterModel(**{"name__not_isnull": "yes"})
+    assert instance.name__not_isnull is True
+
+
+def test_str_not_isnull_accepts_string_no() -> None:
+    """not_isnull should coerce string 'no' to False."""
+    instance = FilterModel(**{"name__not_isnull": "no"})
+    assert instance.name__not_isnull is False
+
+
+# ---------------------------------------------------------------------------
+# between — lexicographical comparison
+# ---------------------------------------------------------------------------
+
+
+def test_str_between_accepts_strings() -> None:
+    """between should accept a list of two strings."""
+    instance = FilterModel(**{"name__between": ["A", "M"]})
+    assert instance.name__between == ["A", "M"]
+
+
+def test_str_between_accepts_comma_separated_string() -> None:
+    """between should parse a comma-separated string with two strings."""
+    instance = FilterModel(**{"name__between": "Alice,Bob"})
+    assert instance.name__between == ["Alice", "Bob"]
+
+
+def test_str_between_rejects_invalid_count() -> None:
+    """between should reject lists that don't have exactly two elements."""
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        FilterModel(**{"name__between": ["Alice"]})
 
 
 # ---------------------------------------------------------------------------

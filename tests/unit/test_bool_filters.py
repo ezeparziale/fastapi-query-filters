@@ -6,7 +6,9 @@ from fastapi_query_filters.dependencies import FilterValues
 
 
 class UserOut(BaseModel):
-    is_active: bool = Field(json_schema_extra={"filters": ["eq", "ne", "isnull"]})
+    is_active: bool = Field(
+        json_schema_extra={"filters": ["eq", "ne", "isnull", "not_isnull"]}
+    )
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -32,6 +34,11 @@ def test_bool_ne_filter_generated() -> None:
 def test_bool_isnull_filter_generated() -> None:
     """bool field with isnull operator should generate the filter field."""
     assert "is_active__isnull" in FilterModel.model_fields
+
+
+def test_bool_not_isnull_filter_generated() -> None:
+    """bool field with not_isnull operator should generate the filter field."""
+    assert "is_active__not_isnull" in FilterModel.model_fields
 
 
 # ---------------------------------------------------------------------------
@@ -385,6 +392,107 @@ def test_bool_isnull_rejects_none_as_value() -> None:
     """isnull set to None should be treated as not provided."""
     instance = FilterModel(**{"is_active__isnull": None})
     assert instance.is_active__isnull is None
+
+
+# ---------------------------------------------------------------------------
+# not_isnull
+# ---------------------------------------------------------------------------
+
+
+def test_bool_not_isnull_accepts_true() -> None:
+    """not_isnull=True should filter for NOT NULL values."""
+    instance = FilterModel(**{"is_active__not_isnull": True})
+    assert instance.is_active__not_isnull is True
+
+
+def test_bool_not_isnull_accepts_false() -> None:
+    """not_isnull=False should filter for NULL values."""
+    instance = FilterModel(**{"is_active__not_isnull": False})
+    assert instance.is_active__not_isnull is False
+
+
+def test_bool_not_isnull_accepts_string_true() -> None:
+    """not_isnull should coerce string 'true' to True."""
+    instance = FilterModel(**{"is_active__not_isnull": "true"})
+    assert instance.is_active__not_isnull is True
+
+
+def test_bool_not_isnull_accepts_string_false() -> None:
+    """not_isnull should coerce string 'false' to False."""
+    instance = FilterModel(**{"is_active__not_isnull": "false"})
+    assert instance.is_active__not_isnull is False
+
+
+def test_bool_not_isnull_accepts_int_1() -> None:
+    """not_isnull should coerce integer 1 to True."""
+    instance = FilterModel(**{"is_active__not_isnull": 1})
+    assert instance.is_active__not_isnull is True
+
+
+def test_bool_not_isnull_accepts_int_0() -> None:
+    """not_isnull should coerce integer 0 to False."""
+    instance = FilterModel(**{"is_active__not_isnull": 0})
+    assert instance.is_active__not_isnull is False
+
+
+def test_bool_not_isnull_accepts_string_yes() -> None:
+    """not_isnull should coerce string 'yes' to True."""
+    instance = FilterModel(**{"is_active__not_isnull": "yes"})
+    assert instance.is_active__not_isnull is True
+
+
+def test_bool_not_isnull_accepts_string_no() -> None:
+    """not_isnull should coerce string 'no' to False."""
+    instance = FilterModel(**{"is_active__not_isnull": "no"})
+    assert instance.is_active__not_isnull is False
+
+
+def test_bool_not_isnull_accepts_string_1() -> None:
+    """not_isnull should coerce string '1' to True."""
+    instance = FilterModel(**{"is_active__not_isnull": "1"})
+    assert instance.is_active__not_isnull is True
+
+
+def test_bool_not_isnull_accepts_string_0() -> None:
+    """not_isnull should coerce string '0' to False."""
+    instance = FilterModel(**{"is_active__not_isnull": "0"})
+    assert instance.is_active__not_isnull is False
+
+
+def test_bool_not_isnull_rejects_float_1() -> None:
+    """not_isnull should reject float 1.0 — from HTTP it arrives as string '1.0' which is not a valid bool."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"is_active__not_isnull": "1.0"})
+
+
+def test_bool_not_isnull_rejects_float_1_1() -> None:
+    """not_isnull should reject float 1.1 — not cleanly convertible to int."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"is_active__not_isnull": 1.1})
+
+
+def test_bool_not_isnull_rejects_integer_2() -> None:
+    """not_isnull should reject integers other than 0 and 1."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"is_active__not_isnull": 2})
+
+
+def test_bool_not_isnull_rejects_negative_integer() -> None:
+    """not_isnull should reject negative integers."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"is_active__not_isnull": -1})
+
+
+def test_bool_not_isnull_rejects_arbitrary_string() -> None:
+    """not_isnull should reject arbitrary strings that don't represent a boolean."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"is_active__not_isnull": "active"})
+
+
+def test_bool_not_isnull_rejects_none_as_value() -> None:
+    """not_isnull set to None should be treated as not provided."""
+    instance = FilterModel(**{"is_active__not_isnull": None})
+    assert instance.is_active__not_isnull is None
 
 
 # ---------------------------------------------------------------------------

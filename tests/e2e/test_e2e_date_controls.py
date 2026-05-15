@@ -162,3 +162,76 @@ def test_e2e_date_disallowed_operator_returns_422(client: TestClient) -> None:
     """Date fields do not support string operators like icontains."""
     response = client.get("/posts", params={"f_mission_date__icontains": "1997"})
     assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("value", "expected_count"),
+    [
+        ("true", 4),  # all posts have mission_date
+        ("false", 0),
+        ("1", 4),
+        ("0", 0),
+        ("yes", 4),
+        ("no", 0),
+        ("y", 4),
+        ("n", 0),
+    ],
+)
+def test_e2e_date_not_isnull_exhaustive(
+    client: TestClient, value: str, expected_count: int
+) -> None:
+    """Validate not_isnull operator for date fields with various boolean representations."""
+    response = client.get("/posts", params={"f_mission_date__not_isnull": value})
+    assert response.status_code == 200
+    assert len(response.json()) == expected_count
+
+
+def test_e2e_date_not_isnull_invalid_returns_422(client: TestClient) -> None:
+    """Invalid boolean values for not_isnull yield 422."""
+    response = client.get("/posts", params={"f_mission_date__not_isnull": "not-a-bool"})
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("value", "expected_titles", "expected_status"),
+    [
+        (
+            "1997-07-27,1997-08-01",
+            {"Mission to Abydos", "Encounter in Chulak"},
+            200,
+        ),
+        (
+            "1997-01-01,1997-12-31",
+            {
+                "Mission to Abydos",
+                "Encounter in Chulak",
+                "Medical supplies inventory",
+                "Contact with Asgard (Classified/Deleted)",
+            },
+            200,
+        ),
+        (
+            "2000-01-01,2000-12-31",
+            set(),
+            200,
+        ),
+        # Invalid formats
+        ("invalid-date,1997-08-01", None, 422),
+        ("1997-07-27,invalid-date", None, 422),
+        ("1997-02-30,1997-08-01", None, 422),  # Logical invalid date
+        ("1997-07-27", None, 422),  # Single value
+        ("1997-07-27,1997-08-01,1997-08-15", None, 422),  # Three values
+    ],
+)
+def test_e2e_date_between_exhaustive(
+    client: TestClient,
+    value: str,
+    expected_titles: set[str] | None,
+    expected_status: int,
+) -> None:
+    """Validate between operator for date fields with various valid and invalid ranges."""
+    response = client.get("/posts", params={"f_mission_date__between": value})
+    assert response.status_code == expected_status
+    if expected_status == 200:
+        got_titles = {_post_title(item) for item in response.json()}
+        assert got_titles == expected_titles

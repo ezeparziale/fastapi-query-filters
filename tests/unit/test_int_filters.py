@@ -8,7 +8,19 @@ from fastapi_query_filters.dependencies import FilterValues
 class UserOut(BaseModel):
     age: int = Field(
         json_schema_extra={
-            "filters": ["eq", "ne", "gt", "lt", "gte", "lte", "in", "not_in", "isnull"]
+            "filters": [
+                "eq",
+                "ne",
+                "gt",
+                "lt",
+                "gte",
+                "lte",
+                "in",
+                "not_in",
+                "isnull",
+                "not_isnull",
+                "between",
+            ]
         }
     )
 
@@ -66,6 +78,16 @@ def test_int_not_in_filter_generated() -> None:
 def test_int_isnull_filter_generated() -> None:
     """int field with isnull operator should generate the filter field."""
     assert "age__isnull" in FilterModel.model_fields
+
+
+def test_int_not_isnull_filter_generated() -> None:
+    """int field with not_isnull operator should generate the filter field."""
+    assert "age__not_isnull" in FilterModel.model_fields
+
+
+def test_int_between_filter_generated() -> None:
+    """int field with between operator should generate the filter field."""
+    assert "age__between" in FilterModel.model_fields
 
 
 # ---------------------------------------------------------------------------
@@ -448,6 +470,178 @@ def test_int_isnull_rejects_none_as_value() -> None:
     """isnull set to None should be treated as not provided."""
     instance = FilterModel(**{"age__isnull": None})
     assert instance.age__isnull is None
+
+
+# ---------------------------------------------------------------------------
+# not_isnull
+# ---------------------------------------------------------------------------
+
+
+def test_int_not_isnull_accepts_true() -> None:
+    """not_isnull=True should filter for NOT NULL values."""
+    instance = FilterModel(**{"age__not_isnull": True})
+    assert instance.age__not_isnull is True
+
+
+def test_int_not_isnull_accepts_false() -> None:
+    """not_isnull=False should filter for NULL values."""
+    instance = FilterModel(**{"age__not_isnull": False})
+    assert instance.age__not_isnull is False
+
+
+def test_int_not_isnull_accepts_string_true() -> None:
+    """not_isnull should coerce string 'true' to True."""
+    instance = FilterModel(**{"age__not_isnull": "true"})
+    assert instance.age__not_isnull is True
+
+
+def test_int_not_isnull_accepts_string_false() -> None:
+    """not_isnull should coerce string 'false' to False."""
+    instance = FilterModel(**{"age__not_isnull": "false"})
+    assert instance.age__not_isnull is False
+
+
+def test_int_not_isnull_accepts_string_1() -> None:
+    """not_isnull should coerce string '1' to True."""
+    instance = FilterModel(**{"age__not_isnull": "1"})
+    assert instance.age__not_isnull is True
+
+
+def test_int_not_isnull_accepts_string_0() -> None:
+    """not_isnull should coerce string '0' to False."""
+    instance = FilterModel(**{"age__not_isnull": "0"})
+    assert instance.age__not_isnull is False
+
+
+def test_int_not_isnull_accepts_int_1() -> None:
+    """not_isnull should coerce integer 1 to True."""
+    instance = FilterModel(**{"age__not_isnull": 1})
+    assert instance.age__not_isnull is True
+
+
+def test_int_not_isnull_accepts_int_0() -> None:
+    """not_isnull should coerce integer 0 to False."""
+    instance = FilterModel(**{"age__not_isnull": 0})
+    assert instance.age__not_isnull is False
+
+
+def test_int_not_isnull_accepts_string_yes() -> None:
+    """not_isnull should coerce string 'yes' to True."""
+    instance = FilterModel(**{"age__not_isnull": "yes"})
+    assert instance.age__not_isnull is True
+
+
+def test_int_not_isnull_accepts_string_no() -> None:
+    """not_isnull should coerce string 'no' to False."""
+    instance = FilterModel(**{"age__not_isnull": "no"})
+    assert instance.age__not_isnull is False
+
+
+def test_int_not_isnull_rejects_float_1() -> None:
+    """not_isnull should reject float 1.0 — from HTTP it arrives as string '1.0' which is not a valid bool."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"age__not_isnull": "1.0"})
+
+
+def test_int_not_isnull_rejects_float_1_1() -> None:
+    """not_isnull should reject float 1.1 — not cleanly convertible to int."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"age__not_isnull": 1.1})
+
+
+def test_int_not_isnull_rejects_integer_2() -> None:
+    """not_isnull should reject integers other than 0 and 1."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"age__not_isnull": 2})
+
+
+def test_int_not_isnull_rejects_negative_integer() -> None:
+    """not_isnull should reject negative integers."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"age__not_isnull": -1})
+
+
+def test_int_not_isnull_rejects_arbitrary_string() -> None:
+    """not_isnull should reject arbitrary strings that don't represent a boolean."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"age__not_isnull": "active"})
+
+
+def test_int_not_isnull_rejects_none_as_value() -> None:
+    """not_isnull set to None should be treated as not provided."""
+    instance = FilterModel(**{"age__not_isnull": None})
+    assert instance.age__not_isnull is None
+
+
+# ---------------------------------------------------------------------------
+# between — range filtering (requires exactly 2 values)
+# ---------------------------------------------------------------------------
+
+
+def test_int_between_accepts_list_of_two_integers() -> None:
+    """between should accept a list of exactly two integers."""
+    instance = FilterModel(**{"age__between": [18, 65]})
+    assert instance.age__between == [18, 65]
+
+
+def test_int_between_accepts_comma_separated_string() -> None:
+    """between should parse a comma-separated string with two values."""
+    instance = FilterModel(**{"age__between": "18,65"})
+    assert instance.age__between == [18, 65]
+
+
+def test_int_between_accepts_comma_separated_string_in_list() -> None:
+    """between should parse a list containing one comma-separated string (FastAPI style)."""
+    instance = FilterModel(**{"age__between": ["18,65"]})
+    assert instance.age__between == [18, 65]
+
+
+def test_int_between_accepts_same_values() -> None:
+    """between should accept two identical values (range of 1)."""
+    instance = FilterModel(**{"age__between": [30, 30]})
+    assert instance.age__between == [30, 30]
+
+
+def test_int_between_accepts_inverse_order() -> None:
+    """between should accept values in any order (ORM handles the range logic)."""
+    instance = FilterModel(**{"age__between": [65, 18]})
+    assert instance.age__between == [65, 18]
+
+
+def test_int_between_rejects_single_value_list() -> None:
+    """between should reject a list with only one value."""
+    with pytest.raises(ValidationError, match="must have exactly two values"):
+        FilterModel(**{"age__between": [18]})
+
+
+def test_int_between_rejects_three_value_list() -> None:
+    """between should reject a list with more than two values."""
+    with pytest.raises(ValidationError, match="must have exactly two values"):
+        FilterModel(**{"age__between": [18, 30, 65]})
+
+
+def test_int_between_rejects_single_value_string() -> None:
+    """between should reject a string without a comma (single value)."""
+    with pytest.raises(ValidationError, match="must have exactly two values"):
+        FilterModel(**{"age__between": "18"})
+
+
+def test_int_between_rejects_three_value_string() -> None:
+    """between should reject a string with more than one comma."""
+    with pytest.raises(ValidationError, match="must have exactly two values"):
+        FilterModel(**{"age__between": "18,30,65"})
+
+
+def test_int_between_rejects_non_numeric_elements() -> None:
+    """between elements must be valid integers."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"age__between": "18,abc"})
+
+
+def test_int_between_rejects_single_integer_value() -> None:
+    """between should reject a single integer value (triggers the non-list/non-str path)."""
+    with pytest.raises(ValidationError, match="must have exactly two values"):
+        FilterModel(**{"age__between": 10})
 
 
 # ---------------------------------------------------------------------------

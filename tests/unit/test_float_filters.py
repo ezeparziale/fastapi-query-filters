@@ -7,7 +7,19 @@ from fastapi_query_filters.dependencies import FilterValues
 
 class UserOut(BaseModel):
     score: float = Field(
-        json_schema_extra={"filters": ["eq", "ne", "gt", "lt", "gte", "lte", "isnull"]}
+        json_schema_extra={
+            "filters": [
+                "eq",
+                "ne",
+                "gt",
+                "lt",
+                "gte",
+                "lte",
+                "isnull",
+                "not_isnull",
+                "between",
+            ]
+        }
     )
 
     model_config = ConfigDict(from_attributes=True)
@@ -54,6 +66,16 @@ def test_float_lte_filter_generated() -> None:
 def test_float_isnull_filter_generated() -> None:
     """float field with isnull operator should generate the filter field."""
     assert "score__isnull" in FilterModel.model_fields
+
+
+def test_float_not_isnull_filter_generated() -> None:
+    """float field with not_isnull operator should generate the filter field."""
+    assert "score__not_isnull" in FilterModel.model_fields
+
+
+def test_float_between_filter_generated() -> None:
+    """float field with between operator should generate the filter field."""
+    assert "score__between" in FilterModel.model_fields
 
 
 # ---------------------------------------------------------------------------
@@ -134,16 +156,164 @@ def test_float_lt_accepts_integer_string() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_float_isnull_accepts_boolean() -> None:
-    """isnull should accept boolean values."""
+def test_float_isnull_accepts_true() -> None:
+    """isnull=True should filter for NULL values."""
     instance = FilterModel(**{"score__isnull": True})
     assert instance.score__isnull is True
+
+
+def test_float_isnull_accepts_false() -> None:
+    """isnull=False should filter for NOT NULL values."""
+    instance = FilterModel(**{"score__isnull": False})
+    assert instance.score__isnull is False
 
 
 def test_float_isnull_accepts_string_true() -> None:
     """isnull should coerce string 'true' to True."""
     instance = FilterModel(**{"score__isnull": "true"})
     assert instance.score__isnull is True
+
+
+def test_float_isnull_accepts_string_false() -> None:
+    """isnull should coerce string 'false' to False."""
+    instance = FilterModel(**{"score__isnull": "false"})
+    assert instance.score__isnull is False
+
+
+def test_float_isnull_accepts_string_1() -> None:
+    """isnull should coerce string '1' to True."""
+    instance = FilterModel(**{"score__isnull": "1"})
+    assert instance.score__isnull is True
+
+
+def test_float_isnull_accepts_string_0() -> None:
+    """isnull should coerce string '0' to False."""
+    instance = FilterModel(**{"score__isnull": "0"})
+    assert instance.score__isnull is False
+
+
+def test_float_isnull_accepts_int_1() -> None:
+    """isnull should coerce integer 1 to True."""
+    instance = FilterModel(**{"score__isnull": 1})
+    assert instance.score__isnull is True
+
+
+def test_float_isnull_accepts_int_0() -> None:
+    """isnull should coerce integer 0 to False."""
+    instance = FilterModel(**{"score__isnull": 0})
+    assert instance.score__isnull is False
+
+
+def test_float_isnull_rejects_arbitrary_string() -> None:
+    """isnull should reject arbitrary strings that don't represent a boolean."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"score__isnull": "active"})
+
+
+def test_float_isnull_rejects_integer_2() -> None:
+    """isnull should reject integers other than 0 and 1."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"score__isnull": 2})
+
+
+def test_float_isnull_accepts_none() -> None:
+    """isnull set to None should be treated as not provided."""
+    instance = FilterModel(**{"score__isnull": None})
+    assert instance.score__isnull is None
+
+
+# ---------------------------------------------------------------------------
+# not_isnull
+# ---------------------------------------------------------------------------
+
+
+def test_float_not_isnull_accepts_true() -> None:
+    """not_isnull=True should filter for NOT NULL values."""
+    instance = FilterModel(**{"score__not_isnull": True})
+    assert instance.score__not_isnull is True
+
+
+def test_float_not_isnull_accepts_false() -> None:
+    """not_isnull=False should filter for NULL values."""
+    instance = FilterModel(**{"score__not_isnull": False})
+    assert instance.score__not_isnull is False
+
+
+def test_float_not_isnull_accepts_string_true() -> None:
+    """not_isnull should coerce string 'true' to True."""
+    instance = FilterModel(**{"score__not_isnull": "true"})
+    assert instance.score__not_isnull is True
+
+
+def test_float_not_isnull_accepts_string_false() -> None:
+    """not_isnull should coerce string 'false' to False."""
+    instance = FilterModel(**{"score__not_isnull": "false"})
+    assert instance.score__not_isnull is False
+
+
+def test_float_not_isnull_accepts_string_1() -> None:
+    """not_isnull should coerce string '1' to True."""
+    instance = FilterModel(**{"score__not_isnull": "1"})
+    assert instance.score__not_isnull is True
+
+
+def test_float_not_isnull_accepts_string_0() -> None:
+    """not_isnull should coerce string '0' to False."""
+    instance = FilterModel(**{"score__not_isnull": "0"})
+    assert instance.score__not_isnull is False
+
+
+def test_float_not_isnull_accepts_int_1() -> None:
+    """not_isnull should coerce integer 1 to True."""
+    instance = FilterModel(**{"score__not_isnull": 1})
+    assert instance.score__not_isnull is True
+
+
+def test_float_not_isnull_accepts_int_0() -> None:
+    """not_isnull should coerce integer 0 to False."""
+    instance = FilterModel(**{"score__not_isnull": 0})
+    assert instance.score__not_isnull is False
+
+
+def test_float_not_isnull_rejects_arbitrary_string() -> None:
+    """not_isnull should reject arbitrary strings that don't represent a boolean."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"score__not_isnull": "active"})
+
+
+def test_float_not_isnull_rejects_integer_2() -> None:
+    """not_isnull should reject integers other than 0 and 1."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"score__not_isnull": 2})
+
+
+def test_float_not_isnull_accepts_none() -> None:
+    """not_isnull set to None should be treated as not provided."""
+    instance = FilterModel(**{"score__not_isnull": None})
+    assert instance.score__not_isnull is None
+
+
+# ---------------------------------------------------------------------------
+# between
+# ---------------------------------------------------------------------------
+
+
+def test_float_between_accepts_floats() -> None:
+    """between should accept a list of two floats."""
+    instance = FilterModel(**{"score__between": [1.5, 9.9]})
+    assert instance.score__between == [1.5, 9.9]
+
+
+def test_float_between_accepts_comma_separated_string() -> None:
+    """between should parse a comma-separated string with two floats."""
+    instance = FilterModel(**{"score__between": "0.5,1.5"})
+    assert instance.score__between == [0.5, 1.5]
+
+
+def test_float_between_rejects_invalid_count() -> None:
+    """between should reject lists that don't have exactly two elements."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"score__between": [1.0, 2.0, 3.0]})
 
 
 # ---------------------------------------------------------------------------

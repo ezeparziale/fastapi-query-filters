@@ -10,7 +10,19 @@ from fastapi_query_filters.dependencies import FilterValues
 class LogOut(BaseModel):
     created_at: datetime = Field(
         json_schema_extra={
-            "filters": ["eq", "ne", "gt", "lt", "gte", "lte", "in", "not_in", "isnull"]
+            "filters": [
+                "eq",
+                "ne",
+                "gt",
+                "lt",
+                "gte",
+                "lte",
+                "in",
+                "not_in",
+                "isnull",
+                "not_isnull",
+                "between",
+            ]
         }
     )
 
@@ -68,6 +80,16 @@ def test_datetime_not_in_filter_generated() -> None:
 def test_datetime_isnull_filter_generated() -> None:
     """datetime field with isnull operator should generate the filter field."""
     assert "created_at__isnull" in FilterModel.model_fields
+
+
+def test_datetime_not_isnull_filter_generated() -> None:
+    """datetime field with not_isnull operator should generate the filter field."""
+    assert "created_at__not_isnull" in FilterModel.model_fields
+
+
+def test_datetime_between_filter_generated() -> None:
+    """datetime field with between operator should generate the filter field."""
+    assert "created_at__between" in FilterModel.model_fields
 
 
 # ---------------------------------------------------------------------------
@@ -321,6 +343,106 @@ def test_datetime_isnull_accepts_none() -> None:
     """isnull set to None should be treated as not provided."""
     instance = FilterModel(**{"created_at__isnull": None})
     assert instance.created_at__isnull is None
+
+
+# ---------------------------------------------------------------------------
+# not_isnull
+# ---------------------------------------------------------------------------
+
+
+def test_datetime_not_isnull_accepts_true() -> None:
+    """not_isnull=True should filter for NOT NULL values."""
+    instance = FilterModel(**{"created_at__not_isnull": True})
+    assert instance.created_at__not_isnull is True
+
+
+def test_datetime_not_isnull_accepts_false() -> None:
+    """not_isnull=False should filter for NULL values."""
+    instance = FilterModel(**{"created_at__not_isnull": False})
+    assert instance.created_at__not_isnull is False
+
+
+def test_datetime_not_isnull_accepts_string_true() -> None:
+    """not_isnull should coerce string 'true' to True."""
+    instance = FilterModel(**{"created_at__not_isnull": "true"})
+    assert instance.created_at__not_isnull is True
+
+
+def test_datetime_not_isnull_accepts_string_false() -> None:
+    """not_isnull should coerce string 'false' to False."""
+    instance = FilterModel(**{"created_at__not_isnull": "false"})
+    assert instance.created_at__not_isnull is False
+
+
+def test_datetime_not_isnull_accepts_string_1() -> None:
+    """not_isnull should coerce string '1' to True."""
+    instance = FilterModel(**{"created_at__not_isnull": "1"})
+    assert instance.created_at__not_isnull is True
+
+
+def test_datetime_not_isnull_accepts_string_0() -> None:
+    """not_isnull should coerce string '0' to False."""
+    instance = FilterModel(**{"created_at__not_isnull": "0"})
+    assert instance.created_at__not_isnull is False
+
+
+def test_datetime_not_isnull_accepts_int_1() -> None:
+    """not_isnull should coerce integer 1 to True."""
+    instance = FilterModel(**{"created_at__not_isnull": 1})
+    assert instance.created_at__not_isnull is True
+
+
+def test_datetime_not_isnull_accepts_int_0() -> None:
+    """not_isnull should coerce integer 0 to False."""
+    instance = FilterModel(**{"created_at__not_isnull": 0})
+    assert instance.created_at__not_isnull is False
+
+
+def test_datetime_not_isnull_rejects_arbitrary_string() -> None:
+    """not_isnull should reject arbitrary strings that don't represent a boolean."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"created_at__not_isnull": "active"})
+
+
+def test_datetime_not_isnull_rejects_integer_2() -> None:
+    """not_isnull should reject integers other than 0 and 1."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"created_at__not_isnull": 2})
+
+
+def test_datetime_not_isnull_accepts_none() -> None:
+    """not_isnull set to None should be treated as not provided."""
+    instance = FilterModel(**{"created_at__not_isnull": None})
+    assert instance.created_at__not_isnull is None
+
+
+# ---------------------------------------------------------------------------
+# between
+# ---------------------------------------------------------------------------
+
+
+def test_datetime_between_accepts_datetime_objects() -> None:
+    """between should accept a list of two datetime objects."""
+    dts = [datetime(2024, 1, 1), datetime(2024, 12, 31)]
+    instance = FilterModel(**{"created_at__between": dts})
+    assert instance.created_at__between == dts
+
+
+def test_datetime_between_accepts_iso_strings() -> None:
+    """between should parse a comma-separated string with two ISO datetimes."""
+    instance = FilterModel(
+        **{"created_at__between": "2024-01-01T00:00:00,2024-12-31T23:59:59"}
+    )
+    assert instance.created_at__between == [
+        datetime(2024, 1, 1),
+        datetime(2024, 12, 31, 23, 59, 59),
+    ]
+
+
+def test_datetime_between_rejects_invalid_count() -> None:
+    """between should reject lists that don't have exactly two elements."""
+    with pytest.raises(ValidationError):
+        FilterModel(**{"created_at__between": [datetime(2024, 1, 1)]})
 
 
 # ---------------------------------------------------------------------------

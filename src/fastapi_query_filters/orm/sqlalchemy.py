@@ -315,6 +315,10 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
             return ~column.in_(val_list)
         elif op == FilterOperator.ISNULL:
             return column.is_(None) if value is True else column.isnot(None)
+        elif op == FilterOperator.NOT_ISNULL:
+            return column.isnot(None) if value is True else column.is_(None)
+        elif op == FilterOperator.BETWEEN:
+            return column.between(value[0], value[1])
         return None
 
 
