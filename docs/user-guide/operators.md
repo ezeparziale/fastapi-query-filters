@@ -26,7 +26,9 @@ When you use a filter like `age__gt=18`, the library splits it into the field (`
 | `iendswith` | `col ILIKE '%val'` | `str` | Ends with (case-insensitive) |
 | `in` | `col IN (...)` | All | Match any value in a list |
 | `not_in` | `col NOT IN (...)` | All | Match none of the values in a list |
+| `between` | `col BETWEEN :v1 AND :v2` | Number, Date, Str | Value within inclusive range |
 | `isnull` | `col IS NULL` | All | Check for NULL (expects a boolean-like value) |
+| `not_isnull` | `col IS NOT NULL` | All | Check for NOT NULL (expects a boolean-like value) |
 
 ---
 
@@ -60,6 +62,9 @@ This explicit approach ensures your API doesn't expose more filters than intende
 `GET /posts?created_at__gte=2024-01-01&created_at__lte=2024-12-31`
 -> `SELECT ... WHERE created_at >= '2024-01-01' AND created_at <= '2024-12-31'`
 
+### Range Filtering (between)
+`GET /posts?age__between=18,65` -> `SELECT ... WHERE age BETWEEN 18 AND 65`
+
 ### Case-Insensitive Search
 `GET /posts?author__icontains=doe` -> `SELECT ... WHERE author ILIKE '%doe%'`
 
@@ -81,3 +86,8 @@ The `isnull` operator expects a boolean-like value. It supports all standard Pyd
     - `?deleted_at__isnull=true` -> `WHERE deleted_at IS NULL`
     - `?deleted_at__isnull=no` -> `WHERE deleted_at IS NOT NULL`
     - `?deleted_at__isnull=1` -> `WHERE deleted_at IS NULL`
+
+### `not_isnull` usage
+Identical truthiness rules as `isnull`, but with inverted logic.
+- `?profile_bio__not_isnull=true` -> `WHERE profile_bio IS NOT NULL`
+- `?profile_bio__not_isnull=false` -> `WHERE profile_bio IS NULL`
