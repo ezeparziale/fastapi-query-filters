@@ -3,12 +3,13 @@ from datetime import UTC, date, datetime, time
 
 from sqlalchemy.orm import Session
 
-from tests.models import Post, Team, User
+from tests.models import Mission, Post, Team, User
 
 
 def seed_db(db: Session) -> None:
     """Seeds the database with fresh SG-1 test data."""
     # Clear existing data
+    db.query(Mission).delete()
     db.query(Post).delete()
     db.query(User).delete()
     db.query(Team).delete()
@@ -152,4 +153,51 @@ def seed_db(db: Session) -> None:
     ]
 
     db.add_all(posts + deleted_posts)
+    db.commit()
+
+    # Create Missions with JSON metadata
+    missions = [
+        Mission(
+            planet_name="P3X-984",
+            mission_metadata={
+                "commander": "Jack O'Neill",
+                "danger_level": 8,
+                "naquadah_concentration": 0.85,
+                "is_classified": True,
+                "scheduled_date": "1997-10-15",
+                "arrival_time": "08:30:00",
+                "last_report": "1997-10-15T12:00:00",
+            },
+        ),
+        Mission(
+            planet_name="P4X-639",
+            mission_metadata={
+                "commander": "Samantha Carter",
+                "danger_level": 4,
+                "naquadah_concentration": 0.15,
+                "is_classified": False,
+                "scheduled_date": "1998-03-22",
+                "arrival_time": "14:15:00",
+                "last_report": "1998-03-22T18:45:00",
+            },
+        ),
+        Mission(
+            planet_name="P2X-555",
+            mission_metadata={
+                "commander": "Teal'c",
+                "danger_level": 10,
+                "naquadah_concentration": 0.95,
+                "is_classified": True,
+                "scheduled_date": "1999-01-01",
+                "arrival_time": "00:00:00",
+                "last_report": "1999-01-01T06:00:00",
+            },
+        ),
+        Mission(planet_name="Empty Planet", mission_metadata=None),
+        Mission(
+            planet_name="Partial Data Planet",
+            mission_metadata={"commander": "Daniel Jackson"},
+        ),
+    ]
+    db.add_all(missions)
     db.commit()

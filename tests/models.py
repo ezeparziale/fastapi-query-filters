@@ -1,7 +1,9 @@
 import uuid
 from datetime import date, datetime, time
+from typing import Any
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Date,
     DateTime,
@@ -79,3 +81,11 @@ class Post(Base):
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     author: Mapped["User"] = relationship(back_populates="posts")
+
+
+class Mission(Base):
+    __tablename__ = "missions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    planet_name: Mapped[str] = mapped_column(String(100))
+    mission_metadata: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)

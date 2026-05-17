@@ -139,3 +139,114 @@ class PostOut(BaseModel):
             "f_mission_date",
         ]
         prefix = "f_"
+
+
+class MissionMetadata(BaseModel):
+    commander: str = Field(
+        json_schema_extra={
+            "filters": [
+                "eq",
+                "ne",
+                "like",
+                "ilike",
+                "icontains",
+                "contains",
+                "startswith",
+                "istartswith",
+                "endswith",
+                "iendswith",
+                "in",
+                "not_in",
+                "isnull",
+                "not_isnull",
+            ]
+        }
+    )
+    danger_level: int = Field(
+        json_schema_extra={
+            "filters": [
+                "eq",
+                "ne",
+                "gt",
+                "lt",
+                "gte",
+                "lte",
+                "in",
+                "not_in",
+                "between",
+                "isnull",
+            ]
+        }
+    )
+    naquadah_concentration: float = Field(
+        json_schema_extra={
+            "filters": ["eq", "ne", "gt", "lt", "gte", "lte", "between", "isnull"]
+        }
+    )
+    is_classified: bool = Field(json_schema_extra={"filters": ["eq", "ne", "isnull"]})
+    scheduled_date: date = Field(
+        json_schema_extra={
+            "filters": [
+                "eq",
+                "ne",
+                "gt",
+                "lt",
+                "gte",
+                "lte",
+                "in",
+                "not_in",
+                "between",
+                "isnull",
+            ]
+        }
+    )
+    arrival_time: time = Field(
+        json_schema_extra={
+            "filters": [
+                "eq",
+                "ne",
+                "gt",
+                "lt",
+                "gte",
+                "lte",
+                "in",
+                "not_in",
+                "between",
+                "isnull",
+            ]
+        }
+    )
+    last_report: datetime = Field(
+        json_schema_extra={
+            "filters": [
+                "eq",
+                "ne",
+                "gt",
+                "lt",
+                "gte",
+                "lte",
+                "in",
+                "not_in",
+                "between",
+                "isnull",
+            ]
+        }
+    )
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MissionOut(BaseModel):
+    id: int = Field(json_schema_extra={"filters": ["eq"]})
+    planet_name: str = Field(
+        alias="planet",
+        json_schema_extra={"filters": ["eq", "icontains"], "filter_alias": "planet"},
+    )
+    mission_metadata: MissionMetadata = Field(alias="data")
+
+    class FilterConfig:
+        prefix = "m_"
+        max_depth = 1
+        search_columns = ["planet_name", "mission_metadata__commander"]
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
