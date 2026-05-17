@@ -222,6 +222,7 @@ def _fields_from_schema(
     operators: dict[str, list[FilterOperator]] | None = None,
     use_alias: bool = True,
     prefix: str = "",
+    real_prefix: str = "",
     depth: int = 1,
     valid_paths: set[str] | None = None,
 ) -> dict[str, Any]:
@@ -252,6 +253,7 @@ def _fields_from_schema(
         # Resolve the base type (handling EmailStr, Annotated, Union, etc.)
         actual_type = _get_root_type(field_type)
         field_path = f"{prefix}{effective_name}"
+        current_real_path = f"{real_prefix}{name}"
 
         # Recursive support for nested models (relationships)
         if (
@@ -260,9 +262,11 @@ def _fields_from_schema(
             and depth > 0
         ):
             nested_prefix = f"{field_path}__"
+            nested_real_prefix = f"{current_real_path}__"
             nested_fields = _fields_from_schema(
                 actual_type,
                 prefix=nested_prefix,
+                real_prefix=nested_real_prefix,
                 depth=depth - 1,
                 use_alias=use_alias,
                 operators=operators,
@@ -276,6 +280,7 @@ def _fields_from_schema(
                 extra_fields = _fields_from_schema(
                     extra_schema,
                     prefix=nested_prefix,
+                    real_prefix=nested_real_prefix,
                     depth=depth - 1,
                     use_alias=use_alias,
                     operators=operators,
@@ -286,9 +291,15 @@ def _fields_from_schema(
             fields.update(nested_fields)
             continue
 
-        # Skip complex containers that cannot be directly filtered
-        if get_origin(actual_type) in (list, dict):
+        # Skip complex containers that cannot be directly filtered.
+        # We only allow dict if it has explicit filters defined in its metadata.
+        if get_origin(actual_type) is list:
             continue
+
+        if get_origin(actual_type) is dict:
+            # Check if this dict field has explicit filters
+            if not isinstance(field_extra, dict) or "filters" not in field_extra:
+                continue
 
         # If it's a leaf node, it's a valid path for sorting/searching
         if valid_paths is not None:
@@ -337,6 +348,7 @@ def _fields_from_schema(
 
             new_extra: dict[str, Any] = {
                 "original_field": name,
+                "real_path": current_real_path,
             }
 
             if effective_name != name:

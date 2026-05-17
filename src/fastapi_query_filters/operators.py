@@ -116,4 +116,10 @@ DEFAULT_OPERATORS: dict[Any, list[FilterOperator]] = {
         FilterOperator.NOT_ISNULL,
         FilterOperator.BETWEEN,
     ],
+    dict: [
+        FilterOperator.EQ,
+        FilterOperator.NE,
+        FilterOperator.ISNULL,
+        FilterOperator.NOT_ISNULL,
+    ],
 }
