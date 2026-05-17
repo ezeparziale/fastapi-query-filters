@@ -86,19 +86,25 @@ def test_fields_from_schema_handles_typeerror_in_issubclass(
 
 
 def test_list_and_dict_fields_are_skipped() -> None:
-    """Verify that complex container types like list and dict are skipped for direct filtering."""
+    """Verify that complex container types like list and dict are skipped for direct filtering,
+    unless they have explicit filters (for JSON support).
+    """
 
     class ListDictModel(BaseModel):
         tags: list[int] = Field(
             default_factory=list, json_schema_extra={"filters": ["eq"]}
         )
         data: dict[str, int] = Field(
+            default_factory=dict  # No filters here
+        )
+        json_field: dict[str, Any] = Field(
             default_factory=dict, json_schema_extra={"filters": ["eq"]}
         )
 
     fields = _fields_from_schema(ListDictModel)
     assert "tags__eq" not in fields
     assert "data__eq" not in fields
+    assert "json_field__eq" in fields
 
 
 def test_subclass_of_str_uses_string_ops() -> None:
