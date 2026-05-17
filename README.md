@@ -16,6 +16,7 @@ Dynamic and declarative query filters for FastAPI, powered by Pydantic v2 and re
 - ⚡ **FastAPI Native**: Seamlessly integrates with FastAPI dependencies
 - 🔤 **Search & Sort**: Support for text search and custom sorting operators
 - 🌳 **Multi-level Relationships**: Filter through nested models at any depth
+- 📂 **JSON & Dictionary Support**: Query nested keys within JSON fields with automatic type casting
 - 🛡️ **Strict Mode**: Optional strict validation for unknown query parameters
 - 🧪 **Type Safe**: Full type hints and mypy strict mode support
 
@@ -131,6 +132,30 @@ GET /posts?sort_by=-created_at,title
 GET /posts?id__in=1,2,3&is_active__eq=true&q=fastapi&sort_by=-created_at
 ```
 
+### JSON Filtering 📂
+
+Query nested keys within JSON fields by defining their structure using Pydantic models. The library automatically handles type casting and cross-database compatibility.
+
+```python
+class MissionMetadata(BaseModel):
+    commander: str = Field(json_schema_extra={"filters": ["eq", "icontains"]})
+    danger_level: int = Field(json_schema_extra={"filters": ["gt", "gte", "between"]})
+
+class MissionOut(BaseModel):
+    planet: str = Field(json_schema_extra={"filters": ["eq"]})
+    # Nested JSON field support via sub-model
+    mission_data: MissionMetadata = Field(alias="data")
+
+# Filter by nested JSON key
+GET /missions?data__commander__eq=Jack
+
+# Filter by nested JSON key with range (auto-cast to int)
+GET /missions?data__danger_level__gt=5
+```
+
+> [!TIP]
+> See a complete working example in [examples/json_app/](https://github.com/ezeparziale/fastapi-query-filters/tree/main/examples/json_app).
+
 ## Supported Operators
 
 The library supports the following filter operators for different field types:
@@ -139,13 +164,13 @@ The library supports the following filter operators for different field types:
 |----------|-------------|---------|-------|
 | `eq` | Equal | `id__eq=1` | all |
 | `ne` | Not equal | `status__ne=inactive` | all |
-| `gt` | Greater than | `age__gt=18` | int, datetime |
-| `lt` | Less than | `age__lt=65` | int, datetime |
-| `gte` | Greater than or equal | `created_at__gte=2024-01-01` | int, datetime |
-| `lte` | Less than or equal | `price__lte=100` | int, datetime |
+| `gt` | Greater than | `age__gt=18` | int, float, datetime, date, time |
+| `lt` | Less than | `age__lt=65` | int, float, datetime, date, time |
+| `gte` | Greater than or equal | `created_at__gte=2024-01-01` | int, float, datetime, date, time |
+| `lte` | Less than or equal | `price__lte=100` | int, float, datetime, date, time |
 | `in` | In list | `id__in=1,2,3` | all |
 | `not_in` | Not in list | `status__not_in=deleted,archived` | all |
-| `between` | Range (inclusive) | `age__between=18,65` | number, date, str |
+| `between` | Range (inclusive) | `age__between=18,65` | all |
 | `like` | SQL LIKE pattern | `name__like=%john%` | str |
 | `ilike` | SQL ILIKE (case-insensitive) | `email__ilike=%gmail%` | str |
 | `icontains` | Case-insensitive contains | `title__icontains=python` | str |
@@ -154,7 +179,7 @@ The library supports the following filter operators for different field types:
 | `istartswith` | Case-insensitive starts with | `name__istartswith=john` | str |
 | `endswith` | Ends with | `name__endswith=Doe` | str |
 | `iendswith` | Case-insensitive ends with | `name__iendswith=doe` | str |
-| `isnull` | Check if value is NULL or NOT NULL (supports boolean-like values: true/false, yes/no, 1/0, etc.) | `status__isnull=true` | all |
+| `isnull` | Check if value is NULL or NOT NULL | `status__isnull=true` | all |
 | `not_isnull` | Inverse of isnull (semantically cleaner) | `status__not_isnull=true` | all |
 
 ## FilterConfig Configuration
