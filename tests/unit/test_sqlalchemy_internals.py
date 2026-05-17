@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects import sqlite
 
 from fastapi_query_filters import FilterValues
-from fastapi_query_filters.core import FilterConfig, create_filter_model
+from fastapi_query_filters.core import create_filter_model
 from fastapi_query_filters.orm.sqlalchemy import SQLAlchemyFilterAdapter
 from tests.models import Mission, User
 
@@ -80,7 +80,7 @@ def test_search_json_element_mock() -> None:
         def ilike(self, q: str) -> bool:
             return True
 
-    class MockConfig(FilterConfig):
+    class MockConfig:
         enable_search = True
         search_field = "q"
         search_columns = ["mock_col"]
@@ -90,7 +90,7 @@ def test_search_json_element_mock() -> None:
         adapter, "_resolve_column", return_value=(select(User), MockCol())
     ):
         stmt = adapter._apply_global_features(
-            select(User), User, {"q": "test"}, cast(type[FilterConfig], MockConfig)
+            select(User), User, {"q": "test"}, cast(Any, MockConfig)
         )
     assert stmt is not None
 
