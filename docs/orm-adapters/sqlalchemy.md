@@ -45,6 +45,20 @@ If you use global search (`q`) on a non-string column (like an `Integer` or `UUI
 ### Aliases & Prefixes
 The adapter respects `filter_alias` and global `prefix` configurations defined in your `FilterConfig`.
 
+### JSON & Dictionary Support
+The adapter provides built-in support for SQLAlchemy `JSON` (and `JSONB`) columns:
+
+- **Nested Key Access**: Use double underscore (`__`) to filter by keys inside a JSON column.
+- **Automatic Type Casting**: Values extracted from JSON (which are usually strings) are automatically cast to the appropriate SQLAlchemy type (e.g., `Integer`, `Date`) based on your Pydantic model.
+- **Cross-Database Compatibility**: Temporal comparisons (Date, DateTime, Time) within JSON use string-based ISO comparisons to ensure consistency across PostgreSQL, MySQL, and SQLite.
+- **Global Search**: Supports global search across specific JSON keys if defined in `search_columns`.
+
+!!! note
+    To use nested JSON filtering, you must define the structure of your JSON field using a Pydantic model in your output schema.
+
+!!! tip "Full Example"
+    Check out the [examples/json_app/](https://github.com/ezeparziale/fastapi-query-filters/tree/main/examples/json_app) directory for a complete working application using JSON fields.
+
 ---
 
 ## Advanced: Manual Adapter Usage

@@ -10,12 +10,12 @@ When you use a filter like `age__gt=18`, the library splits it into the field (`
 
 | Operator | SQL Equivalent (SQLAlchemy) | Supported Types | Description |
 | :--- | :--- | :--- | :--- |
-| `eq` | `col = :val` | All | Exact match |
-| `ne` | `col != :val` | All | Not equal |
-| `gt` | `col > :val` | Number, Date, Time | Greater than |
-| `lt` | `col < :val` | Number, Date, Time | Less than |
-| `gte` | `col >= :val` | Number, Date, Time | Greater than or equal |
-| `lte` | `col <= :val` | Number, Date, Time | Less than or equal |
+| `eq` | `col = :val` | all types (including `dict`, `bool`) | Exact match |
+| `ne` | `col != :val` | all types (including `dict`, `bool`) | Not equal |
+| `gt` | `col > :val` | `int`, `float`, `datetime`, `date`, `time` | Greater than |
+| `lt` | `col < :val` | `int`, `float`, `datetime`, `date`, `time` | Less than |
+| `gte` | `col >= :val` | `int`, `float`, `datetime`, `date`, `time` | Greater than or equal |
+| `lte` | `col <= :val` | `int`, `float`, `datetime`, `date`, `time` | Less than or equal |
 | `like` | `col LIKE :val` | `str` | SQL LIKE (case-sensitive) |
 | `ilike` | `col ILIKE :val` | `str` | SQL ILIKE (case-insensitive) |
 | `icontains` | `col ILIKE '%val%'` | `str` | Case-insensitive substring match |
@@ -24,11 +24,11 @@ When you use a filter like `age__gt=18`, the library splits it into the field (`
 | `istartswith` | `col ILIKE 'val%'` | `str` | Starts with (case-insensitive) |
 | `endswith` | `col LIKE '%val'` | `str` | Ends with (case-sensitive) |
 | `iendswith` | `col ILIKE '%val'` | `str` | Ends with (case-insensitive) |
-| `in` | `col IN (...)` | All | Match any value in a list |
-| `not_in` | `col NOT IN (...)` | All | Match none of the values in a list |
-| `between` | `col BETWEEN :v1 AND :v2` | Number, Date, Str | Value within inclusive range |
-| `isnull` | `col IS NULL` | All | Check for NULL (expects a boolean-like value) |
-| `not_isnull` | `col IS NOT NULL` | All | Check for NOT NULL (expects a boolean-like value) |
+| `in` | `col IN (...)` | `int`, `str`, `datetime`, `date`, `time` | Match any value in a list |
+| `not_in` | `col NOT IN (...)` | `int`, `str`, `datetime`, `date`, `time` | Match none of values in a list |
+| `between` | `col BETWEEN :v1 AND :v2` | `int`, `float`, `str`, `datetime`, `date`, `time` | Value within inclusive range |
+| `isnull` | `col IS NULL` | all types (including `dict`, `bool`) | Check for NULL |
+| `not_isnull` | `col IS NOT NULL` | all types (including `dict`, `bool`) | Check for NOT NULL |
 
 ---
 
@@ -45,6 +45,15 @@ By default, no filters are enabled for your schema fields. You must explicitly d
         price: float = Field(json_schema_extra={"filters": ["gt", "lt"]})
         is_available: bool = Field(json_schema_extra={"filters": ["eq"]})
     ```
+
+### Support for JSON / Dictionary Fields
+
+To filter by keys inside a JSON field, you must tip the field with a Pydantic sub-model. This allows the engine to discover and generate nested filter paths.
+
+!!! tip "JSON Example"
+    For a complete working example of filtering complex JSON structures, see the [examples/json_app/](https://github.com/ezeparziale/fastapi-query-filters/tree/main/examples/json_app) directory.
+
+---
 
 This explicit approach ensures your API doesn't expose more filters than intended, keeping your queries optimized and your API documentation clean.
 
