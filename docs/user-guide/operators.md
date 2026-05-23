@@ -10,8 +10,8 @@ When you use a filter like `age__gt=18`, the library splits it into the field (`
 
 | Operator | SQL Equivalent (SQLAlchemy) | Supported Types | Description |
 | :--- | :--- | :--- | :--- |
-| `eq` | `col = :val` | all types (including `dict`, `bool`) | Exact match |
-| `ne` | `col != :val` | all types (including `dict`, `bool`) | Not equal |
+| `eq` | `col = :val` | all types (except `dict`, including `bool`) | Exact match |
+| `ne` | `col != :val` | all types (except `dict`, including `bool`) | Not equal |
 | `gt` | `col > :val` | `int`, `float`, `datetime`, `date`, `time` | Greater than |
 | `lt` | `col < :val` | `int`, `float`, `datetime`, `date`, `time` | Less than |
 | `gte` | `col >= :val` | `int`, `float`, `datetime`, `date`, `time` | Greater than or equal |
@@ -29,6 +29,8 @@ When you use a filter like `age__gt=18`, the library splits it into the field (`
 | `between` | `col BETWEEN :v1 AND :v2` | `int`, `float`, `str`, `datetime`, `date`, `time` | Value within inclusive range |
 | `isnull` | `col IS NULL` | all types (including `dict`, `bool`) | Check for NULL |
 | `not_isnull` | `col IS NOT NULL` | all types (including `dict`, `bool`) | Check for NOT NULL |
+| `is_empty` | `col = '{}'` | `dict` | Check if dictionary is empty `{}` |
+| `is_blank` | `col = '{}' OR col IS NULL` | `dict` | Check if dictionary is empty `{}` or NULL |
 
 ---
 
@@ -48,7 +50,27 @@ By default, no filters are enabled for your schema fields. You must explicitly d
 
 ### Support for JSON / Dictionary Fields
 
-To filter by keys inside a JSON field, you must tip the field with a Pydantic sub-model. This allows the engine to discover and generate nested filter paths.
+You can query keys inside a JSON/dictionary field using double underscores `__` (which requires tipping the field with a Pydantic sub-model).
+
+Additionally, you can perform queries on the entire JSON column/dictionary using the following operators:
+- **`is_empty`**: Validates whether the dictionary is exactly `{}` (empty JSON object).
+- **`is_blank`**: Validates whether the dictionary is exactly `{}` OR is `NULL` in the database.
+
+These boolean operators are highly useful for filtering empty/blank fields and can be combined with `isnull` for more complex criteria.
+
+!!! example "Dictionary Filters"
+    ```python
+    from pydantic import BaseModel, Field
+
+    class MissionSchema(BaseModel):
+        # Allow checking if the metadata dict is empty or blank
+        metadata: dict = Field(json_schema_extra={"filters": ["is_empty", "is_blank", "isnull"]})
+    ```
+
+    - `?metadata__is_empty=true` -> Matches records where `metadata` is exactly `{}`.
+    - `?metadata__is_empty=false` -> Matches records where `metadata` is NOT `{}` (and is not null).
+    - `?metadata__is_blank=true` -> Matches records where `metadata` is `{}` OR `NULL`.
+    - `?metadata__is_blank=false` -> Matches records where `metadata` is NOT `{}` AND NOT `NULL`.
 
 !!! tip "JSON Example"
     For a complete working example of filtering complex JSON structures, see the [examples/json_app/](https://github.com/ezeparziale/fastapi-query-filters/tree/main/examples/json_app) directory.

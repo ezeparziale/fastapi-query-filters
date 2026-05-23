@@ -25,6 +25,8 @@ class FilterOperator(StrEnum):
     ISNULL = "isnull"
     NOT_ISNULL = "not_isnull"
     BETWEEN = "between"
+    IS_EMPTY = "is_empty"
+    IS_BLANK = "is_blank"
 
 
 # Mapping of Python types to their default allowed filter operators.
@@ -117,8 +119,8 @@ DEFAULT_OPERATORS: dict[Any, list[FilterOperator]] = {
         FilterOperator.BETWEEN,
     ],
     dict: [
-        FilterOperator.EQ,
-        FilterOperator.NE,
+        FilterOperator.IS_EMPTY,
+        FilterOperator.IS_BLANK,
         FilterOperator.ISNULL,
         FilterOperator.NOT_ISNULL,
     ],

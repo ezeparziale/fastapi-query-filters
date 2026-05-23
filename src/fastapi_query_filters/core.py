@@ -293,10 +293,10 @@ def _fields_from_schema(
 
         # Skip complex containers that cannot be directly filtered.
         # We only allow dict if it has explicit filters defined in its metadata.
-        if get_origin(actual_type) is list:
+        if get_origin(actual_type) is list or actual_type is list:
             continue
 
-        if get_origin(actual_type) is dict:
+        if get_origin(actual_type) is dict or actual_type is dict:
             # Check if this dict field has explicit filters
             if not isinstance(field_extra, dict) or "filters" not in field_extra:
                 continue
@@ -322,9 +322,10 @@ def _fields_from_schema(
         # --- Strict Operator Validation with Inheritance Support ---
         type_allowed_ops: list[FilterOperator] | None = None
 
-        # 1. Try exact match first (prevents bool from matching int)
-        if actual_type in DEFAULT_OPERATORS:
-            type_allowed_ops = DEFAULT_OPERATORS[actual_type]
+        # 1. Try match first (including generic origins like dict[str, Any])
+        lookup_type = get_origin(actual_type) or actual_type
+        if lookup_type in DEFAULT_OPERATORS:
+            type_allowed_ops = DEFAULT_OPERATORS[lookup_type]
         else:
             # 2. Fallback to inheritance (useful for EmailStr, etc.)
             for base_type, ops in DEFAULT_OPERATORS.items():
@@ -356,7 +357,12 @@ def _fields_from_schema(
 
             # Type mapping: Partial string matches use 'str', others use original type
             field_filter_type: Any
-            if op in (FilterOperator.ISNULL, FilterOperator.NOT_ISNULL):
+            if op in (
+                FilterOperator.ISNULL,
+                FilterOperator.NOT_ISNULL,
+                FilterOperator.IS_EMPTY,
+                FilterOperator.IS_BLANK,
+            ):
                 field_filter_type = bool | None
             elif op in (
                 FilterOperator.IN,

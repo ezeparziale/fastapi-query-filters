@@ -98,13 +98,13 @@ def test_list_and_dict_fields_are_skipped() -> None:
             default_factory=dict  # No filters here
         )
         json_field: dict[str, Any] = Field(
-            default_factory=dict, json_schema_extra={"filters": ["eq"]}
+            default_factory=dict, json_schema_extra={"filters": ["isnull"]}
         )
 
     fields = _fields_from_schema(ListDictModel)
     assert "tags__eq" not in fields
     assert "data__eq" not in fields
-    assert "json_field__eq" in fields
+    assert "json_field__isnull" in fields
 
 
 def test_subclass_of_str_uses_string_ops() -> None:
