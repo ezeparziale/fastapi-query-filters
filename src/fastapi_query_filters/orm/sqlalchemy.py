@@ -363,10 +363,16 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
                 global_prefix=resolve_prefix,
             )
 
+            # Check if it's a nested JSON field by looking for "__" in the path after stripping prefix
+            path_no_prefix = path_to_resolve
+            if resolve_prefix and path_no_prefix.startswith(resolve_prefix):
+                path_no_prefix = path_no_prefix[len(resolve_prefix) :]
+            is_nested = "__" in path_no_prefix
+
             if col is not None:
                 filters.append(
                     self._get_operator_expression(
-                        col, op, value, target_type=target_type
+                        col, op, value, target_type=target_type, is_nested=is_nested
                     )
                 )
 
@@ -376,11 +382,19 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
         return stmt
 
     def _get_operator_expression(
-        self, column: Any, op: FilterOperator, value: Any, target_type: Any = None
+        self,
+        column: Any,
+        op: FilterOperator,
+        value: Any,
+        target_type: Any = None,
+        is_nested: bool = False,
     ) -> Any:
         """Maps FilterOperator to SQLAlchemy comparison expressions."""
         # JSON Casting logic: if the column is a JSON element and we have a target type, cast it.
-        if hasattr(column, "as_string"):
+        # Do not treat the root JSON/dict column as a JSON element.
+        is_json_element = hasattr(column, "as_string") and is_nested
+
+        if is_json_element:
             # Force unquoted extraction for all engines (->> in Postgres, JSON_EXTRACT in SQLite/MySQL)
             column = column.as_string()
 
@@ -446,6 +460,18 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
             return column.isnot(None) if value is True else column.is_(None)
         elif op == FilterOperator.BETWEEN:
             return column.between(value[0], value[1])
+        elif op == FilterOperator.IS_EMPTY:
+            return (
+                column == {}
+                if value is True
+                else and_(column != {}, column.isnot(None), column != JSON.NULL)
+            )
+        elif op == FilterOperator.IS_BLANK:
+            return (
+                or_(column == {}, column.is_(None), column == JSON.NULL)
+                if value is True
+                else and_(column != {}, column.isnot(None), column != JSON.NULL)
+            )
         return None
 
     def _map_python_to_sa_type(self, py_type: Any) -> Any:
