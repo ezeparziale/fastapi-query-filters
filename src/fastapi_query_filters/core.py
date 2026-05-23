@@ -356,7 +356,12 @@ def _fields_from_schema(
 
             # Type mapping: Partial string matches use 'str', others use original type
             field_filter_type: Any
-            if op in (FilterOperator.ISNULL, FilterOperator.NOT_ISNULL):
+            if op in (
+                FilterOperator.ISNULL,
+                FilterOperator.NOT_ISNULL,
+                FilterOperator.IS_EMPTY,
+                FilterOperator.IS_BLANK,
+            ):
                 field_filter_type = bool | None
             elif op in (
                 FilterOperator.IN,
