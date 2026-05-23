@@ -138,3 +138,39 @@ def test_non_json_column_invalid_nested_path() -> None:
     # id is an Integer, so id__something is invalid
     new_stmt, col = adapter._resolve_column(stmt, User, "id__something", set())
     assert col is None
+
+
+def test_nested_json_path_with_prefix() -> None:
+    """Verify prefix stripping for nested JSON paths in _apply_dynamic_filters.
+
+    When a filter field uses a nested JSON path and a global prefix is configured,
+    the adapter must strip the prefix from the path before determining if it is
+    a nested JSON access (containing '__'). This ensures 'is_nested' is correctly
+    set to True, enabling proper JSON casting and extraction.
+    """
+
+    class ManualFilterModel(BaseModel):
+        p_mission_metadata__date__gte: date | None = Field(default=None)
+
+        class FilterConfig:
+            prefix = "p_"
+
+    # Manually attach the config as the factory would
+    ManualFilterModel._source_filter_config = ManualFilterModel.FilterConfig  # type: ignore
+
+    filters = FilterValues(
+        ManualFilterModel(**{"p_mission_metadata__date__gte": date(1997, 1, 1)})
+    )
+
+    adapter = SQLAlchemyFilterAdapter()
+    stmt = select(Mission)
+    # field_path = "p_mission_metadata__date", resolve_prefix = "p_"
+    # path_no_prefix strips to "mission_metadata__date" -> is_nested = True
+    stmt = adapter.apply_filters(stmt, Mission, filters)
+    sql = str(
+        stmt.compile(dialect=sqlite.dialect(), compile_kwargs={"literal_binds": True})
+    )
+    assert "1997-01-01" in sql
+    # Verify it was treated as nested JSON
+    assert "mission_metadata" in sql
+    assert "date" in sql
