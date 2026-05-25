@@ -1,4 +1,5 @@
 from datetime import date, datetime, time
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, HttpUrl, IPvAnyAddress
@@ -236,17 +237,35 @@ class MissionMetadata(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ExtraInfo(BaseModel):
+    mission_metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        alias="metadata",
+        json_schema_extra={
+            "filters": [
+                "has_key",
+                "has_any_keys",
+                "has_all_keys",
+            ],
+            "filter_alias": "metadata",
+        },
+    )
+
+
 class MissionOut(BaseModel):
     id: int = Field(json_schema_extra={"filters": ["eq"]})
     planet_name: str = Field(
         alias="planet",
         json_schema_extra={"filters": ["eq", "icontains"], "filter_alias": "planet"},
     )
-    mission_metadata: MissionMetadata = Field(alias="data")
+    mission_metadata: MissionMetadata = Field(
+        alias="data", json_schema_extra={"filters": ["has_key"]}
+    )
 
     class FilterConfig:
         prefix = "m_"
         max_depth = 1
         search_columns = ["planet_name", "mission_metadata__commander"]
+        extra_filters = ExtraInfo
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)

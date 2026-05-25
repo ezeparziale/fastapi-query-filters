@@ -58,7 +58,7 @@ class Post(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(255))
-    description: Mapped[str | None] = mapped_column(String)
+    description: Mapped[str | None] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     gate_address: Mapped[str | None] = mapped_column(String(7), nullable=True)
     casualties: Mapped[int | None] = mapped_column(Integer, nullable=True)
