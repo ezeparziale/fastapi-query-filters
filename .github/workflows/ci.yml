@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   quality:
@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ "3.11", "3.12", "3.13", "3.14" ]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - name: Checkout code
@@ -39,6 +39,129 @@ jobs:
         run: mypy .
 
       - name: Run tests with coverage
+        run: python -m pytest
+
+  sqlite-tests:
+    name: DB Matrix (sqlite)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[dev,all]
+
+      - name: Run tests on selected DB
+        env:
+          TEST_DATABASE_URL: "sqlite:///:memory:"
+        run: python -m pytest
+
+  db-matrix:
+    name: DB Matrix (${{ matrix.db.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        db:
+          - name: postgres18
+            image: postgres:18
+            port: 5432
+            test_database_url: postgresql+psycopg://postgres:postgres@127.0.0.1:5432/fqf_test
+          - name: mysql8
+            image: mysql:8
+            port: 3306
+            test_database_url: mysql+pymysql://root:root@127.0.0.1:3306/fqf_test
+          - name: mysql9
+            image: mysql:9
+            port: 3306
+            test_database_url: mysql+pymysql://root:root@127.0.0.1:3306/fqf_test
+    services:
+      db:
+        image: ${{ matrix.db.image }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: fqf_test
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: fqf_test
+        ports:
+          - ${{ matrix.db.port }}:${{ matrix.db.port }}
+        options: >-
+          --health-cmd "${{ startsWith(matrix.db.name, 'postgres') && 'pg_isready -U postgres -d fqf_test' || 'mysqladmin ping -h 127.0.0.1 -proot' }}"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[dev,all]
+          pip install "psycopg[binary]" pymysql
+
+      - name: Wait for PostgreSQL
+        if: startsWith(matrix.db.name, 'postgres')
+        run: |
+          python - <<'PY'
+          import time
+          import psycopg
+
+          dsn = "postgresql://postgres:postgres@127.0.0.1:5432/fqf_test"
+          for _ in range(30):
+              try:
+                  with psycopg.connect(dsn):
+                      print("PostgreSQL is ready")
+                      raise SystemExit(0)
+              except Exception:
+                  time.sleep(2)
+          raise SystemExit(1)
+          PY
+
+      - name: Wait for MySQL
+        if: startsWith(matrix.db.name, 'mysql')
+        run: |
+          python - <<'PY'
+          import time
+          import pymysql
+
+          for _ in range(30):
+              try:
+                  conn = pymysql.connect(
+                      host="127.0.0.1",
+                      port=3306,
+                      user="root",
+                      password="root",
+                      database="fqf_test",
+                  )
+                  conn.close()
+                  print("MySQL is ready")
+                  raise SystemExit(0)
+              except Exception:
+                  time.sleep(2)
+          raise SystemExit(1)
+          PY
+
+      - name: Run tests on selected DB
+        env:
+          TEST_DATABASE_URL: ${{ matrix.db.test_database_url }}
         run: python -m pytest
 
   build:
