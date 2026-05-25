@@ -31,6 +31,9 @@ When you use a filter like `age__gt=18`, the library splits it into the field (`
 | `not_isnull` | `col IS NOT NULL` | all types (including `dict`, `bool`) | Check for NOT NULL |
 | `is_empty` | `col = '{}'` | `dict` | Check if dictionary is empty `{}` |
 | `is_blank` | `col = '{}' OR col IS NULL` | `dict` | Check if dictionary is empty `{}` or NULL |
+| `has_key` | dialect-specific JSON key existence check | `dict` | Check if dictionary contains a key |
+| `has_any_keys` | dialect-specific JSON key existence check | `dict` | Check if dictionary contains at least one key from a list |
+| `has_all_keys` | dialect-specific JSON key existence check | `dict` | Check if dictionary contains all keys from a list |
 
 ---
 
@@ -55,6 +58,9 @@ You can query keys inside a JSON/dictionary field using double underscores `__` 
 Additionally, you can perform queries on the entire JSON column/dictionary using the following operators:
 - **`is_empty`**: Validates whether the dictionary is exactly `{}` (empty JSON object).
 - **`is_blank`**: Validates whether the dictionary is exactly `{}` OR is `NULL` in the database.
+- **`has_key`**: Validates whether the dictionary contains a specific key.
+- **`has_any_keys`**: Validates whether the dictionary contains at least one key from a provided list.
+- **`has_all_keys`**: Validates whether the dictionary contains all keys from a provided list.
 
 These boolean operators are highly useful for filtering empty/blank fields and can be combined with `isnull` for more complex criteria.
 
@@ -64,13 +70,27 @@ These boolean operators are highly useful for filtering empty/blank fields and c
 
     class MissionSchema(BaseModel):
         # Allow checking if the metadata dict is empty or blank
-        metadata: dict = Field(json_schema_extra={"filters": ["is_empty", "is_blank", "isnull"]})
+        metadata: dict = Field(
+            json_schema_extra={
+                "filters": [
+                    "is_empty",
+                    "is_blank",
+                    "isnull",
+                    "has_key",
+                    "has_any_keys",
+                    "has_all_keys",
+                ]
+            }
+        )
     ```
 
     - `?metadata__is_empty=true` -> Matches records where `metadata` is exactly `{}`.
     - `?metadata__is_empty=false` -> Matches records where `metadata` is NOT `{}` (and is not null).
     - `?metadata__is_blank=true` -> Matches records where `metadata` is `{}` OR `NULL`.
     - `?metadata__is_blank=false` -> Matches records where `metadata` is NOT `{}` AND NOT `NULL`.
+    - `?metadata__has_key=commander` -> Matches records where key `commander` exists.
+    - `?metadata__has_any_keys=commander,danger_level` -> Matches records where at least one of those keys exists.
+    - `?metadata__has_all_keys=commander,danger_level` -> Matches records where all provided keys exist.
 
 !!! tip "JSON Example"
     For a complete working example of filtering complex JSON structures, see the [examples/json_app/](https://github.com/ezeparziale/fastapi-query-filters/tree/main/examples/json_app) directory.

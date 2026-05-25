@@ -181,6 +181,11 @@ The library supports the following filter operators for different field types:
 | `iendswith` | Case-insensitive ends with | `name__iendswith=doe` | str |
 | `isnull` | Check if value is NULL or NOT NULL | `status__isnull=true` | all |
 | `not_isnull` | Inverse of isnull (semantically cleaner) | `status__not_isnull=true` | all |
+| `is_empty` | Check if dictionary is exactly `{}` | `metadata__is_empty=true` | dict |
+| `is_blank` | Check if dictionary is `{}` or `NULL` | `metadata__is_blank=true` | dict |
+| `has_key` | Check if dictionary has a specific key | `metadata__has_key=commander` | dict |
+| `has_any_keys` | Check if dictionary has at least one key from a list | `metadata__has_any_keys=commander,danger_level` | dict |
+| `has_all_keys` | Check if dictionary has all keys from a list | `metadata__has_all_keys=commander,danger_level` | dict |
 
 ## FilterConfig Configuration
 
