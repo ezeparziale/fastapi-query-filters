@@ -27,6 +27,9 @@ class FilterOperator(StrEnum):
     BETWEEN = "between"
     IS_EMPTY = "is_empty"
     IS_BLANK = "is_blank"
+    HAS_KEY = "has_key"
+    HAS_ANY_KEYS = "has_any_keys"
+    HAS_ALL_KEYS = "has_all_keys"
 
 
 # Mapping of Python types to their default allowed filter operators.
@@ -123,5 +126,8 @@ DEFAULT_OPERATORS: dict[Any, list[FilterOperator]] = {
         FilterOperator.IS_BLANK,
         FilterOperator.ISNULL,
         FilterOperator.NOT_ISNULL,
+        FilterOperator.HAS_KEY,
+        FilterOperator.HAS_ANY_KEYS,
+        FilterOperator.HAS_ALL_KEYS,
     ],
 }

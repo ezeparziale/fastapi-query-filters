@@ -370,6 +370,13 @@ def _fields_from_schema(
                 FilterOperator.BETWEEN,
             ):
                 field_filter_type = list[actual_type] | None  # type: ignore[valid-type]
+            elif op in (
+                FilterOperator.HAS_ANY_KEYS,
+                FilterOperator.HAS_ALL_KEYS,
+            ):
+                field_filter_type = list[str] | None
+            elif op == FilterOperator.HAS_KEY:
+                field_filter_type = str | None
             elif op in STRING_OPS:
                 field_filter_type = str | None
             else:
