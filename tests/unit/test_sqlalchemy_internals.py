@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from pydantic import BaseModel, Field
 from sqlalchemy import select
-from sqlalchemy.dialects import sqlite
+from sqlalchemy.dialects import mysql, postgresql, sqlite
 
 from fastapi_query_filters import FilterValues
 from fastapi_query_filters.core import create_filter_model
@@ -174,3 +174,189 @@ def test_nested_json_path_with_prefix() -> None:
     # Verify it was treated as nested JSON
     assert "mission_metadata" in sql
     assert "date" in sql
+
+
+def test_has_key_compiles_per_dialect() -> None:
+    """Verify HAS_KEY uses dialect-specific SQL for JSON key existence."""
+    from fastapi_query_filters.operators import FilterOperator
+
+    adapter = SQLAlchemyFilterAdapter()
+    expr = adapter._get_operator_expression(
+        Mission.mission_metadata, FilterOperator.HAS_KEY, "commander"
+    )
+
+    sqlite_sql = str(
+        select(Mission)
+        .where(expr)
+        .compile(dialect=sqlite.dialect(), compile_kwargs={"literal_binds": True})
+    )
+    mysql_sql = str(
+        select(Mission)
+        .where(expr)
+        .compile(dialect=mysql.dialect(), compile_kwargs={"literal_binds": True})
+    )
+    pg_dialect = postgresql.dialect()  # type: ignore[no-untyped-call]
+    postgres_sql = str(
+        select(Mission)
+        .where(expr)
+        .compile(dialect=pg_dialect, compile_kwargs={"literal_binds": True})
+    )
+
+    assert "json_each(" in sqlite_sql
+    assert "JSON_CONTAINS_PATH(" in mysql_sql
+    assert " ? " in postgres_sql
+    assert "::jsonb" in postgres_sql
+
+
+def test_has_any_keys_compiles_per_dialect() -> None:
+    """Verify HAS_ANY_KEYS uses dialect-specific SQL for JSON keys existence."""
+    from fastapi_query_filters.operators import FilterOperator
+
+    adapter = SQLAlchemyFilterAdapter()
+    expr = adapter._get_operator_expression(
+        Mission.mission_metadata,
+        FilterOperator.HAS_ANY_KEYS,
+        ["commander", "danger_level"],
+    )
+
+    sqlite_sql = str(
+        select(Mission)
+        .where(expr)
+        .compile(dialect=sqlite.dialect(), compile_kwargs={"literal_binds": True})
+    )
+    mysql_sql = str(
+        select(Mission)
+        .where(expr)
+        .compile(dialect=mysql.dialect(), compile_kwargs={"literal_binds": True})
+    )
+    pg_dialect = postgresql.dialect()  # type: ignore[no-untyped-call]
+    postgres_sql = str(
+        select(Mission)
+        .where(expr)
+        .compile(dialect=pg_dialect, compile_kwargs={"literal_binds": True})
+    )
+
+    assert "json_each(" in sqlite_sql
+    assert "JSON_CONTAINS_PATH(" in mysql_sql
+    assert " ?| ARRAY[" in postgres_sql
+    assert "::jsonb" in postgres_sql
+
+
+def test_has_all_keys_compiles_per_dialect() -> None:
+    """Verify HAS_ALL_KEYS uses dialect-specific SQL for JSON keys existence."""
+    from fastapi_query_filters.operators import FilterOperator
+
+    adapter = SQLAlchemyFilterAdapter()
+    expr = adapter._get_operator_expression(
+        Mission.mission_metadata,
+        FilterOperator.HAS_ALL_KEYS,
+        ["commander", "danger_level"],
+    )
+
+    sqlite_sql = str(
+        select(Mission)
+        .where(expr)
+        .compile(dialect=sqlite.dialect(), compile_kwargs={"literal_binds": True})
+    )
+    mysql_sql = str(
+        select(Mission)
+        .where(expr)
+        .compile(dialect=mysql.dialect(), compile_kwargs={"literal_binds": True})
+    )
+    pg_dialect = postgresql.dialect()  # type: ignore[no-untyped-call]
+    postgres_sql = str(
+        select(Mission)
+        .where(expr)
+        .compile(dialect=pg_dialect, compile_kwargs={"literal_binds": True})
+    )
+
+    assert "COUNT(DISTINCT json_each.key)" in sqlite_sql
+    assert "JSON_CONTAINS_PATH(" in mysql_sql
+    assert " ?& ARRAY[" in postgres_sql
+    assert "::jsonb" in postgres_sql
+
+
+def test_is_empty_compiles_per_dialect() -> None:
+    """Verify IS_EMPTY uses dialect-specific SQL for JSON object checks."""
+    from fastapi_query_filters.operators import FilterOperator
+
+    adapter = SQLAlchemyFilterAdapter()
+    expr = adapter._get_operator_expression(
+        Mission.mission_metadata, FilterOperator.IS_EMPTY, True
+    )
+
+    sqlite_sql = str(
+        select(Mission)
+        .where(expr)
+        .compile(dialect=sqlite.dialect(), compile_kwargs={"literal_binds": True})
+    )
+    mysql_sql = str(
+        select(Mission)
+        .where(expr)
+        .compile(dialect=mysql.dialect(), compile_kwargs={"literal_binds": True})
+    )
+    pg_dialect = postgresql.dialect()  # type: ignore[no-untyped-call]
+    postgres_sql = str(
+        select(Mission)
+        .where(expr)
+        .compile(dialect=pg_dialect, compile_kwargs={"literal_binds": True})
+    )
+
+    assert "json_type(" in sqlite_sql
+    assert "JSON_TYPE(" in mysql_sql
+    assert "JSON_LENGTH(" in mysql_sql
+    assert "::jsonb = '{}'::jsonb" in postgres_sql
+
+
+def test_is_blank_compiles_per_dialect() -> None:
+    """Verify IS_BLANK uses dialect-specific SQL for JSON blank checks."""
+    from fastapi_query_filters.operators import FilterOperator
+
+    adapter = SQLAlchemyFilterAdapter()
+    expr = adapter._get_operator_expression(
+        Mission.mission_metadata, FilterOperator.IS_BLANK, True
+    )
+
+    sqlite_sql = str(
+        select(Mission)
+        .where(expr)
+        .compile(dialect=sqlite.dialect(), compile_kwargs={"literal_binds": True})
+    )
+    mysql_sql = str(
+        select(Mission)
+        .where(expr)
+        .compile(dialect=mysql.dialect(), compile_kwargs={"literal_binds": True})
+    )
+    pg_dialect = postgresql.dialect()  # type: ignore[no-untyped-call]
+    postgres_sql = str(
+        select(Mission)
+        .where(expr)
+        .compile(dialect=pg_dialect, compile_kwargs={"literal_binds": True})
+    )
+
+    assert "json_type(" in sqlite_sql
+    assert "JSON_TYPE(" in mysql_sql
+    assert "::jsonb = '{}'::jsonb" in postgres_sql
+    assert "::jsonb = 'null'::jsonb" in postgres_sql
+
+
+def test_string_eq_mysql_compiles_as_binary_comparison() -> None:
+    """Verify EQ on string columns compiles to _bin collation in MySQL."""
+    from fastapi_query_filters.operators import FilterOperator
+
+    adapter = SQLAlchemyFilterAdapter()
+    expr = adapter._get_operator_expression(User.name, FilterOperator.EQ, "Jack")
+
+    mysql_sql = str(
+        select(User)
+        .where(expr)
+        .compile(dialect=mysql.dialect(), compile_kwargs={"literal_binds": True})
+    )
+    sqlite_sql = str(
+        select(User)
+        .where(expr)
+        .compile(dialect=sqlite.dialect(), compile_kwargs={"literal_binds": True})
+    )
+
+    assert "COLLATE utf8mb4_bin" in mysql_sql
+    assert " = " in sqlite_sql
