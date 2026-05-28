@@ -8,8 +8,12 @@ from sqlalchemy.dialects import mysql, postgresql, sqlite
 
 from fastapi_query_filters import FilterValues
 from fastapi_query_filters.core import create_filter_model
-from fastapi_query_filters.orm.sqlalchemy import SQLAlchemyFilterAdapter
-from tests.models import Mission, User
+from fastapi_query_filters.orm.sqlalchemy import (
+    SQLAlchemyFilterAdapter,
+    apply_filters,
+)
+from tests.models import Mission, Post, User
+from tests.schemas import PostOut
 
 
 def test_resolve_column_prefix_strip() -> None:
@@ -360,3 +364,98 @@ def test_string_eq_mysql_compiles_as_binary_comparison() -> None:
 
     assert "COLLATE utf8mb4_bin" in mysql_sql
     assert " = " in sqlite_sql
+
+
+def test_array_contains_compiles_per_dialect() -> None:
+    """Verify ARR_CONTAINS compiles for PostgreSQL and MySQL."""
+    from fastapi_query_filters.operators import FilterOperator
+
+    adapter = SQLAlchemyFilterAdapter()
+    expr = adapter._get_operator_expression(
+        Post.tags, FilterOperator.ARR_CONTAINS, "desert", target_type=list[str]
+    )
+
+    pg_dialect = postgresql.dialect()  # type: ignore[no-untyped-call]
+    postgres_sql = str(select(Post).where(expr).compile(dialect=pg_dialect))
+    mysql_sql = str(select(Post).where(expr).compile(dialect=mysql.dialect()))
+
+    assert " @> " in postgres_sql
+    assert "JSON_CONTAINS(" in mysql_sql
+
+
+def test_array_contains_compiles_for_sqlite() -> None:
+    """Verify ARR_CONTAINS compiles for SQLite."""
+    from fastapi_query_filters.operators import FilterOperator
+
+    adapter = SQLAlchemyFilterAdapter()
+    expr = adapter._get_operator_expression(
+        Post.tags, FilterOperator.ARR_CONTAINS, "desert", target_type=list[str]
+    )
+
+    sqlite_sql = str(select(Post).where(expr).compile(dialect=sqlite.dialect()))
+
+    assert "json_each(posts.tags)" in sqlite_sql
+
+
+def test_array_length_compiles_per_dialect() -> None:
+    """Verify ARR_LENGTH compiles for PostgreSQL and MySQL."""
+    from fastapi_query_filters.operators import FilterOperator
+
+    adapter = SQLAlchemyFilterAdapter()
+    expr = adapter._get_operator_expression(
+        Post.tags, FilterOperator.ARR_LENGTH, 3, target_type=list[str]
+    )
+
+    pg_dialect = postgresql.dialect()  # type: ignore[no-untyped-call]
+    postgres_sql = str(select(Post).where(expr).compile(dialect=pg_dialect))
+    mysql_sql = str(select(Post).where(expr).compile(dialect=mysql.dialect()))
+
+    assert "cardinality(posts.tags)" in postgres_sql
+    assert "JSON_LENGTH(posts.tags)" in mysql_sql
+
+
+def test_array_length_compiles_for_sqlite() -> None:
+    """Verify ARR_LENGTH compiles for SQLite."""
+    from fastapi_query_filters.operators import FilterOperator
+
+    adapter = SQLAlchemyFilterAdapter()
+    expr = adapter._get_operator_expression(
+        Post.tags, FilterOperator.ARR_LENGTH, 3, target_type=list[str]
+    )
+
+    sqlite_sql = str(select(Post).where(expr).compile(dialect=sqlite.dialect()))
+
+    assert "json_array_length(posts.tags)" in sqlite_sql
+
+
+def test_array_overlap_compiles_per_dialect() -> None:
+    """Verify ARR_OVERLAP compiles for SQLite, PostgreSQL and MySQL."""
+    from fastapi_query_filters.operators import FilterOperator
+
+    adapter = SQLAlchemyFilterAdapter()
+    expr = adapter._get_operator_expression(
+        Post.tags,
+        FilterOperator.ARR_OVERLAP,
+        ["desert", "medical"],
+        target_type=list[str],
+    )
+
+    sqlite_sql = str(select(Post).where(expr).compile(dialect=sqlite.dialect()))
+    pg_dialect = postgresql.dialect()  # type: ignore[no-untyped-call]
+    postgres_sql = str(select(Post).where(expr).compile(dialect=pg_dialect))
+    mysql_sql = str(select(Post).where(expr).compile(dialect=mysql.dialect()))
+
+    assert "json_each(posts.tags)" in sqlite_sql
+    assert " && " in postgres_sql
+    assert "JSON_OVERLAPS(posts.tags" in mysql_sql
+
+
+def test_module_level_apply_filters_helper_is_used() -> None:
+    """Verify the module-level apply_filters helper delegates correctly."""
+    FilterModel = create_filter_model(PostOut)
+    filters = FilterValues(FilterModel(f_tags__arr_len=0))
+
+    stmt = apply_filters(select(Post), Post, filters)
+    sql = str(stmt.compile(dialect=sqlite.dialect()))
+
+    assert "json_array_length(posts.tags) = ?" in sql
