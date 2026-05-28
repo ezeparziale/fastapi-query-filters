@@ -53,6 +53,14 @@ The adapter provides built-in support for SQLAlchemy `JSON` (and `JSONB`) column
 - **Cross-Database Compatibility**: Temporal comparisons (Date, DateTime, Time) within JSON use string-based ISO comparisons to ensure consistency across PostgreSQL, MySQL, and SQLite.
 - **Global Search**: Supports global search across specific JSON keys if defined in `search_columns`.
 
+### Array Support
+The adapter also supports `list[...]` fields backed by SQLAlchemy `JSON` columns for array-like data:
+
+- `arr_contains`, `arr_all`, `arr_any`, and `arr_overlap` compile to dialect-specific containment/overlap predicates.
+- `arr_len` compiles to native length functions such as `cardinality(...)` on PostgreSQL, `json_array_length(...)` on SQLite, and `JSON_LENGTH(...)` on MySQL.
+- `is_empty` and `is_blank` work for arrays as well as JSON objects.
+- `arr_overlap` has native support for PostgreSQL, SQLite, and MySQL using the corresponding JSON/array functions.
+
 !!! note
     To use nested JSON filtering, you must define the structure of your JSON field using a Pydantic model in your output schema.
 
