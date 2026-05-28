@@ -170,4 +170,4 @@ def test_array_overlap_compiles_for_supported_dialects() -> None:
 
     assert "json_each(posts.tags)" in sqlite_sql
     assert "JSON_OVERLAPS(posts.tags" in mysql_sql
-    assert "posts.tags &&" in postgres_sql
+    assert "jsonb_array_elements" in postgres_sql

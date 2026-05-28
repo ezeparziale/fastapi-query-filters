@@ -410,7 +410,7 @@ def test_array_length_compiles_per_dialect() -> None:
     postgres_sql = str(select(Post).where(expr).compile(dialect=pg_dialect))
     mysql_sql = str(select(Post).where(expr).compile(dialect=mysql.dialect()))
 
-    assert "cardinality(posts.tags)" in postgres_sql
+    assert "jsonb_array_length" in postgres_sql
     assert "JSON_LENGTH(posts.tags)" in mysql_sql
 
 
@@ -446,7 +446,7 @@ def test_array_overlap_compiles_per_dialect() -> None:
     mysql_sql = str(select(Post).where(expr).compile(dialect=mysql.dialect()))
 
     assert "json_each(posts.tags)" in sqlite_sql
-    assert " && " in postgres_sql
+    assert "jsonb_array_elements" in postgres_sql
     assert "JSON_OVERLAPS(posts.tags" in mysql_sql
 
 
