@@ -353,6 +353,12 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
             target_type = field_info.annotation if field_info else None
             extra = field_info.json_schema_extra if field_info else {}
             real_path = extra.get("real_path") if isinstance(extra, dict) else None
+            if (
+                isinstance(extra, dict)
+                and extra.get("container_type") == "list"
+                and op in (FilterOperator.IS_EMPTY, FilterOperator.IS_BLANK)
+            ):
+                target_type = list
 
             # Use real_path for resolution if available to bypass alias complexity
             path_to_resolve = cast(str, real_path if real_path else field_path)
@@ -396,7 +402,18 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
         """Maps FilterOperator to SQLAlchemy comparison expressions."""
         # JSON Casting logic: if the column is a JSON element and we have a target type, cast it.
         # Do not treat the root JSON/dict column as a JSON element.
-        is_json_element = hasattr(column, "as_string") and is_nested
+        is_json_element = (
+            hasattr(column, "as_string")
+            and is_nested
+            and op
+            not in (
+                FilterOperator.ARR_CONTAINS,
+                FilterOperator.ARR_ALL,
+                FilterOperator.ARR_OVERLAP,
+                FilterOperator.ARR_ANY,
+                FilterOperator.ARR_LENGTH,
+            )
+        )
 
         if is_json_element:
             # Force unquoted extraction for all engines (->> in Postgres, JSON_EXTRACT in SQLite/MySQL)
@@ -471,7 +488,11 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
         elif op == FilterOperator.BETWEEN:
             return column.between(value[0], value[1])
         elif op == FilterOperator.IS_EMPTY:
-            is_empty_expr = json_is_empty_object(column)
+            actual_type = self._unwrap_type(target_type) if target_type else None
+            if actual_type is list or get_origin(actual_type) is list:
+                is_empty_expr = array_length(column) == 0
+            else:
+                is_empty_expr = json_is_empty_object(column)
             is_json_null_expr = json_is_json_null(column)
             return (
                 is_empty_expr
@@ -479,13 +500,28 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
                 else and_(~is_empty_expr, column.isnot(None), ~is_json_null_expr)
             )
         elif op == FilterOperator.IS_BLANK:
-            is_empty_expr = json_is_empty_object(column)
+            actual_type = self._unwrap_type(target_type) if target_type else None
+            if actual_type is list or get_origin(actual_type) is list:
+                is_empty_expr = array_length(column) == 0
+            else:
+                is_empty_expr = json_is_empty_object(column)
             is_json_null_expr = json_is_json_null(column)
             return (
                 or_(is_empty_expr, column.is_(None), is_json_null_expr)
                 if value is True
                 else and_(~is_empty_expr, column.isnot(None), ~is_json_null_expr)
             )
+        elif op == FilterOperator.ARR_CONTAINS:
+            val = [value] if not isinstance(value, list) else value
+            return array_contains(column, literal(val, type_=JSON))
+        elif op == FilterOperator.ARR_ALL:
+            val_list = value if isinstance(value, list) else [value]
+            return array_contains(column, literal(val_list, type_=JSON))
+        elif op in (FilterOperator.ARR_OVERLAP, FilterOperator.ARR_ANY):
+            val_list = value if isinstance(value, list) else [value]
+            return array_overlap(column, literal(val_list, type_=JSON))
+        elif op == FilterOperator.ARR_LENGTH:
+            return array_length(column) == value
         elif op == FilterOperator.HAS_KEY:
             return json_has_key(column, literal(value))
         elif op == FilterOperator.HAS_ANY_KEYS:
@@ -732,6 +768,87 @@ if HAS_SQLALCHEMY:
         column_sql = compiler.process(list(element.clauses)[0], **kw)
         value_sql = compiler.process(list(element.clauses)[1], **kw)
         return f"({column_sql} COLLATE utf8mb4_bin = {value_sql} COLLATE utf8mb4_bin)"
+
+    class array_contains(FunctionElement[bool]):
+        type = Boolean()
+        inherit_cache = True
+
+    class array_overlap(FunctionElement[bool]):
+        type = Boolean()
+        inherit_cache = True
+
+    class array_length(FunctionElement[int]):
+        type = Integer()
+        inherit_cache = True
+
+    @compiles(array_contains, "postgresql")
+    def _compile_array_contains_postgresql(
+        element: "array_contains", compiler: Any, **kw: Any
+    ) -> str:
+        column_sql = compiler.process(list(element.clauses)[0], **kw)
+        value_sql = compiler.process(list(element.clauses)[1], **kw)
+        return f"({column_sql} @> {value_sql})"
+
+    @compiles(array_overlap, "postgresql")
+    def _compile_array_overlap_postgresql(
+        element: "array_overlap", compiler: Any, **kw: Any
+    ) -> str:
+        column_sql = compiler.process(list(element.clauses)[0], **kw)
+        value_sql = compiler.process(list(element.clauses)[1], **kw)
+        return f"({column_sql} && {value_sql})"
+
+    @compiles(array_length, "postgresql")
+    def _compile_array_length_postgresql(
+        element: "array_length", compiler: Any, **kw: Any
+    ) -> str:
+        column_sql = compiler.process(list(element.clauses)[0], **kw)
+        return f"cardinality({column_sql})"
+
+    @compiles(array_contains, "sqlite")
+    def _compile_array_contains_sqlite(
+        element: "array_contains", compiler: Any, **kw: Any
+    ) -> str:
+        column_sql = compiler.process(list(element.clauses)[0], **kw)
+        value_sql = compiler.process(list(element.clauses)[1], **kw)
+        return f"EXISTS (SELECT 1 FROM json_each({column_sql}) WHERE json_each.value IN (SELECT value FROM json_each({value_sql})))"
+
+    @compiles(array_overlap, "sqlite")
+    def _compile_array_overlap_sqlite(
+        element: "array_overlap", compiler: Any, **kw: Any
+    ) -> str:
+        column_sql = compiler.process(list(element.clauses)[0], **kw)
+        value_sql = compiler.process(list(element.clauses)[1], **kw)
+        return f"EXISTS (SELECT 1 FROM json_each({column_sql}) WHERE json_each.value IN (SELECT value FROM json_each({value_sql})))"
+
+    @compiles(array_length, "sqlite")
+    def _compile_array_length_sqlite(
+        element: "array_length", compiler: Any, **kw: Any
+    ) -> str:
+        column_sql = compiler.process(list(element.clauses)[0], **kw)
+        return f"json_array_length({column_sql})"
+
+    @compiles(array_contains, "mysql")
+    def _compile_array_contains_mysql(
+        element: "array_contains", compiler: Any, **kw: Any
+    ) -> str:
+        column_sql = compiler.process(list(element.clauses)[0], **kw)
+        value_sql = compiler.process(list(element.clauses)[1], **kw)
+        return f"JSON_CONTAINS({column_sql}, {value_sql})"
+
+    @compiles(array_overlap, "mysql")
+    def _compile_array_overlap_mysql(
+        element: "array_overlap", compiler: Any, **kw: Any
+    ) -> str:
+        column_sql = compiler.process(list(element.clauses)[0], **kw)
+        value_sql = compiler.process(list(element.clauses)[1], **kw)
+        return f"JSON_OVERLAPS({column_sql}, {value_sql})"
+
+    @compiles(array_length, "mysql")
+    def _compile_array_length_mysql(
+        element: "array_length", compiler: Any, **kw: Any
+    ) -> str:
+        column_sql = compiler.process(list(element.clauses)[0], **kw)
+        return f"JSON_LENGTH({column_sql})"
 
 
 def apply_filters(
