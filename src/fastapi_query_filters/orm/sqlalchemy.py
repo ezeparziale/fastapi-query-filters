@@ -787,7 +787,7 @@ if HAS_SQLALCHEMY:
     ) -> str:
         column_sql = compiler.process(list(element.clauses)[0], **kw)
         value_sql = compiler.process(list(element.clauses)[1], **kw)
-        return f"({column_sql} @> {value_sql})"
+        return f"(({column_sql})::jsonb @> ({value_sql})::jsonb)"
 
     @compiles(array_overlap, "postgresql")
     def _compile_array_overlap_postgresql(
@@ -795,14 +795,14 @@ if HAS_SQLALCHEMY:
     ) -> str:
         column_sql = compiler.process(list(element.clauses)[0], **kw)
         value_sql = compiler.process(list(element.clauses)[1], **kw)
-        return f"({column_sql} && {value_sql})"
+        return f"EXISTS (SELECT 1 FROM jsonb_array_elements(({value_sql})::jsonb) v WHERE ({column_sql})::jsonb @> v)"
 
     @compiles(array_length, "postgresql")
     def _compile_array_length_postgresql(
         element: "array_length", compiler: Any, **kw: Any
     ) -> str:
         column_sql = compiler.process(list(element.clauses)[0], **kw)
-        return f"cardinality({column_sql})"
+        return f"jsonb_array_length(({column_sql})::jsonb)"
 
     @compiles(array_contains, "sqlite")
     def _compile_array_contains_sqlite(
