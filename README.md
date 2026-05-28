@@ -17,6 +17,7 @@ Dynamic and declarative query filters for FastAPI, powered by Pydantic v2 and re
 - 🔤 **Search & Sort**: Support for text search and custom sorting operators
 - 🌳 **Multi-level Relationships**: Filter through nested models at any depth
 - 📂 **JSON & Dictionary Support**: Query nested keys within JSON fields with automatic type casting
+- 🧩 **Array/List Support**: Filter `list[...]` fields with containment, overlap, and length operators
 - 🛡️ **Strict Mode**: Optional strict validation for unknown query parameters
 - 🧪 **Type Safe**: Full type hints and mypy strict mode support
 
@@ -153,6 +154,43 @@ GET /missions?data__commander__eq=Jack
 GET /missions?data__danger_level__gt=5
 ```
 
+### Array Filtering 🧩
+
+You can expose `list[...]` fields in your schema and filter them using array operators:
+
+```python
+class PostOut(BaseModel):
+    tags: list[str] = Field(
+        default_factory=list,
+        json_schema_extra={
+            "filters": [
+                "arr_contains",
+                "arr_overlap",
+                "arr_all",
+                "arr_any",
+                "arr_len",
+                "is_empty",
+                "is_blank",
+            ]
+        },
+    )
+```
+
+```bash
+# Contains one value
+GET /posts?tags__arr_contains=desert
+
+# Overlap with any value from a list
+GET /posts?tags__arr_overlap=desert,jaffa
+
+# Require all listed values
+GET /posts?tags__arr_all=desert,ancient
+
+# Match any value and check length
+GET /posts?tags__arr_any=medical,inventory
+GET /posts?tags__arr_len=3
+```
+
 > [!TIP]
 > See a complete working example in [examples/json_app/](https://github.com/ezeparziale/fastapi-query-filters/tree/main/examples/json_app).
 
@@ -186,6 +224,13 @@ The library supports the following filter operators for different field types:
 | `has_key` | Check if dictionary has a specific key | `metadata__has_key=commander` | dict |
 | `has_any_keys` | Check if dictionary has at least one key from a list | `metadata__has_any_keys=commander,danger_level` | dict |
 | `has_all_keys` | Check if dictionary has all keys from a list | `metadata__has_all_keys=commander,danger_level` | dict |
+| `arr_contains` | Check if an array contains a value | `tags__arr_contains=desert` | list |
+| `arr_overlap` | Check if an array overlaps with a list of values | `tags__arr_overlap=desert,jaffa` | list |
+| `arr_all` | Check if an array contains all listed values | `tags__arr_all=desert,ancient` | list |
+| `arr_any` | Check if an array contains any listed value | `tags__arr_any=medical,inventory` | list |
+| `arr_len` | Check the array length | `tags__arr_len=3` | list |
+| `is_empty` | Check if array or dict is empty | `tags__is_empty=true` | list, dict |
+| `is_blank` | Check if array or dict is empty or NULL | `tags__is_blank=true` | list, dict |
 
 ## FilterConfig Configuration
 
