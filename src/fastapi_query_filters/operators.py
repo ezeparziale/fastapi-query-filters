@@ -30,6 +30,11 @@ class FilterOperator(StrEnum):
     HAS_KEY = "has_key"
     HAS_ANY_KEYS = "has_any_keys"
     HAS_ALL_KEYS = "has_all_keys"
+    ARR_CONTAINS = "arr_contains"
+    ARR_OVERLAP = "arr_overlap"
+    ARR_ALL = "arr_all"
+    ARR_ANY = "arr_any"
+    ARR_LENGTH = "arr_len"
 
 
 # Mapping of Python types to their default allowed filter operators.
@@ -129,5 +134,16 @@ DEFAULT_OPERATORS: dict[Any, list[FilterOperator]] = {
         FilterOperator.HAS_KEY,
         FilterOperator.HAS_ANY_KEYS,
         FilterOperator.HAS_ALL_KEYS,
+    ],
+    list: [
+        FilterOperator.ARR_CONTAINS,
+        FilterOperator.ARR_OVERLAP,
+        FilterOperator.ARR_ALL,
+        FilterOperator.ARR_ANY,
+        FilterOperator.ARR_LENGTH,
+        FilterOperator.IS_EMPTY,
+        FilterOperator.IS_BLANK,
+        FilterOperator.ISNULL,
+        FilterOperator.NOT_ISNULL,
     ],
 }

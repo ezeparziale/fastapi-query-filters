@@ -292,10 +292,7 @@ def _fields_from_schema(
             continue
 
         # Skip complex containers that cannot be directly filtered.
-        # We only allow dict if it has explicit filters defined in its metadata.
-        if get_origin(actual_type) is list or actual_type is list:
-            continue
-
+        # We only allow dict/list if they have explicit filters or are simple containers.
         if get_origin(actual_type) is dict or actual_type is dict:
             # Check if this dict field has explicit filters
             if not isinstance(field_extra, dict) or "filters" not in field_extra:
@@ -344,6 +341,12 @@ def _fields_from_schema(
             # Fallback for unknown types: only allow equality by default
             allowed_ops = [op for op in requested_ops if op == FilterOperator.EQ]
 
+        # Determine inner type for list-based fields to use in operators
+        inner_type = actual_type
+        if get_origin(actual_type) is list:
+            args = get_args(actual_type)
+            inner_type = args[0] if args else Any
+
         for op in allowed_ops:
             filter_name = f"{prefix}{effective_name}__" + op.value
 
@@ -354,6 +357,9 @@ def _fields_from_schema(
 
             if effective_name != name:
                 new_extra["field_alias"] = effective_name
+
+            if get_origin(actual_type) is list or actual_type is list:
+                new_extra["container_type"] = "list"
 
             # Type mapping: Partial string matches use 'str', others use original type
             field_filter_type: Any
@@ -368,8 +374,15 @@ def _fields_from_schema(
                 FilterOperator.IN,
                 FilterOperator.NOT_IN,
                 FilterOperator.BETWEEN,
+                FilterOperator.ARR_OVERLAP,
+                FilterOperator.ARR_ALL,
+                FilterOperator.ARR_ANY,
             ):
-                field_filter_type = list[actual_type] | None  # type: ignore[valid-type]
+                field_filter_type = list[inner_type] | None  # type: ignore[valid-type]
+            elif op == FilterOperator.ARR_CONTAINS:
+                field_filter_type = inner_type | None
+            elif op == FilterOperator.ARR_LENGTH:
+                field_filter_type = int | None
             elif op in (
                 FilterOperator.HAS_ANY_KEYS,
                 FilterOperator.HAS_ALL_KEYS,
