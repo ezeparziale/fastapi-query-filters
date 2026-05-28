@@ -34,6 +34,11 @@ When you use a filter like `age__gt=18`, the library splits it into the field (`
 | `has_key` | dialect-specific JSON key existence check | `dict` | Check if dictionary contains a key |
 | `has_any_keys` | dialect-specific JSON key existence check | `dict` | Check if dictionary contains at least one key from a list |
 | `has_all_keys` | dialect-specific JSON key existence check | `dict` | Check if dictionary contains all keys from a list |
+| `arr_contains` | dialect-specific array containment check | `list` | Check if an array contains a value |
+| `arr_overlap` | dialect-specific array overlap check | `list` | Check if an array shares at least one value with a list |
+| `arr_all` | dialect-specific array containment check | `list` | Check if an array contains all values from a list |
+| `arr_any` | dialect-specific array overlap check | `list` | Check if an array contains any value from a list |
+| `arr_len` | `array_length(col) = :n` | `list` | Check if an array has the expected length |
 
 ---
 
@@ -63,6 +68,47 @@ Additionally, you can perform queries on the entire JSON column/dictionary using
 - **`has_all_keys`**: Validates whether the dictionary contains all keys from a provided list.
 
 These boolean operators are highly useful for filtering empty/blank fields and can be combined with `isnull` for more complex criteria.
+
+### Support for Array Fields
+
+You can also expose `list[...]` fields in your schema and filter them with array-specific operators:
+
+- **`arr_contains`**: Array contains the provided scalar value.
+- **`arr_overlap`**: Array shares at least one value with the provided list.
+- **`arr_all`**: Array contains all values from the provided list.
+- **`arr_any`**: Array contains any value from the provided list.
+- **`arr_len`**: Array length matches the provided integer.
+- **`is_empty`**: Array is empty.
+- **`is_blank`**: Array is empty or `NULL`.
+
+!!! example "Array Filters"
+    ```python
+    from pydantic import BaseModel, Field
+
+    class PostSchema(BaseModel):
+        tags: list[str] = Field(
+            default_factory=list,
+            json_schema_extra={
+                "filters": [
+                    "arr_contains",
+                    "arr_overlap",
+                    "arr_all",
+                    "arr_any",
+                    "arr_len",
+                    "is_empty",
+                    "is_blank",
+                ]
+            },
+        )
+    ```
+
+    - `?tags__arr_contains=desert` -> Matches rows where `tags` contains `desert`.
+    - `?tags__arr_overlap=desert,jaffa` -> Matches rows where `tags` contains at least one of those values.
+    - `?tags__arr_all=desert,ancient` -> Matches rows where `tags` contains all values.
+    - `?tags__arr_any=medical,inventory` -> Matches rows where `tags` contains any value.
+    - `?tags__arr_len=3` -> Matches rows where `tags` has exactly 3 elements.
+    - `?tags__is_empty=true` -> Matches rows where `tags` is `[]`.
+    - `?tags__is_blank=true` -> Matches rows where `tags` is `[]` or `NULL`.
 
 !!! example "Dictionary Filters"
     ```python

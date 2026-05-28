@@ -97,6 +97,22 @@ class PostOut(BaseModel):
     mission_report_url: HttpUrl | None = Field(
         None, json_schema_extra={"filters": ["eq", "isnull", "not_isnull"]}
     )
+    tags: list[str] = Field(
+        default_factory=list,
+        json_schema_extra={
+            "filters": [
+                "arr_contains",
+                "arr_overlap",
+                "arr_all",
+                "arr_any",
+                "arr_len",
+                "is_empty",
+                "is_blank",
+                "isnull",
+                "not_isnull",
+            ]
+        },
+    )
     mission_date: date | None = Field(
         None,
         json_schema_extra={

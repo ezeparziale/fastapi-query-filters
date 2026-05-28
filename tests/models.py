@@ -64,6 +64,7 @@ class Post(Base):
     casualties: Mapped[int | None] = mapped_column(Integer, nullable=True)
     success_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
     mission_report_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    tags: Mapped[list[str]] = mapped_column(JSON, default=list)
     mission_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     mission_start: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
