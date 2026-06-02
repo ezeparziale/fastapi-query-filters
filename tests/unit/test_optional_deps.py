@@ -1,5 +1,6 @@
 import importlib
 import sys
+from typing import Any, cast
 from unittest.mock import patch
 
 import pytest
@@ -8,10 +9,12 @@ import pytest
 def test_sqlalchemy_missing_error() -> None:
     """Verify that a helpful ImportError is raised when sqlalchemy is not installed."""
 
-    # 1. Clear the module from sys.modules to force a re-import
     module_name = "fastapi_query_filters.orm.sqlalchemy"
-    if module_name in sys.modules:
-        del sys.modules[module_name]
+
+    # 1. Clear the module and its submodules from sys.modules to force a re-import
+    for mod in list(sys.modules.keys()):
+        if mod.startswith(module_name):
+            del sys.modules[mod]
 
     # 2. Mock the import of sqlalchemy to fail
     with patch.dict(
@@ -32,10 +35,11 @@ def test_sqlalchemy_missing_error() -> None:
         assert "The 'sqlalchemy' extra is required" in str(excinfo.value)
 
         with pytest.raises(ImportError) as excinfo:
-            sa_adapter.apply_filters(None, None, None)  # type: ignore
+            sa_adapter.apply_filters(cast(Any, None), cast(Any, None), cast(Any, None))
         assert "The 'sqlalchemy' extra is required" in str(excinfo.value)
 
     # Cleanup: Reload the module normally so other tests aren't affected
-    if module_name in sys.modules:
-        del sys.modules[module_name]
+    for mod in list(sys.modules.keys()):
+        if mod.startswith(module_name):
+            del sys.modules[mod]
     importlib.import_module(module_name)

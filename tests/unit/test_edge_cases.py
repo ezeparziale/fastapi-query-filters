@@ -78,7 +78,7 @@ def test_filter_dep_execution() -> None:
 
 def test_sqlalchemy_adapter_no_sqlalchemy(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify that _check_sqlalchemy raises an ImportError when HAS_SQLALCHEMY is False."""
-    import fastapi_query_filters.orm.sqlalchemy as sa_adapter
+    import fastapi_query_filters.orm.sqlalchemy._compat as sa_adapter
 
     monkeypatch.setattr(sa_adapter, "HAS_SQLALCHEMY", False)
 
