@@ -1,73 +1,51 @@
 import types
-from typing import TYPE_CHECKING, Any, TypeVar, Union, cast, get_args, get_origin
+from typing import TYPE_CHECKING, Any, Union, cast, get_args, get_origin
 
 from pydantic import BaseModel
 
-try:
-    from sqlalchemy import (
-        JSON,
-        Boolean,
-        Date,
-        DateTime,
-        Float,
-        Integer,
-        String,
-        Text,
-        Time,
-        and_,
-        asc,
-        desc,
-        false,
-        literal,
-        or_,
-        true,
-    )
-    from sqlalchemy import cast as sa_cast
-    from sqlalchemy.ext.compiler import compiles
-    from sqlalchemy.orm import DeclarativeBase, RelationshipProperty
-    from sqlalchemy.sql import Select
-    from sqlalchemy.sql.functions import FunctionElement
-
-    HAS_SQLALCHEMY = True
-except ImportError:
-    HAS_SQLALCHEMY = False
-
-    if not TYPE_CHECKING:
-        # Define dummy classes/types to avoid NameErrors during module load
-        class DeclarativeBase:
-            pass
-
-        class Select:
-            pass
-
-        class RelationshipProperty:
-            pass
-
-        String = Text = and_ = asc = desc = or_ = sa_cast = Integer = Float = (
-            Boolean
-        ) = Date = DateTime = Time = Numeric = JSON = None
-
-
-from ..core import FilterConfig
-from ..dependencies import FilterValues
-from ..operators import FilterOperator
-from .base import ORMFilterAdapter
+from ...core import FilterConfig
+from ...dependencies import FilterValues
+from ...operators import FilterOperator
+from ..base import ORMFilterAdapter
+from ._compat import (
+    JSON,
+    Boolean,
+    Date,
+    DateTime,
+    Float,
+    Integer,
+    RelationshipProperty,
+    Select,
+    String,
+    T,
+    Text,
+    Time,
+    _check_sqlalchemy,
+    and_,
+    asc,
+    desc,
+    false,
+    literal,
+    or_,
+    sa_cast,
+    true,
+)
+from ._compilers import (
+    array_contains,
+    array_length,
+    array_overlap,
+    json_has_all_keys,
+    json_has_any_keys,
+    json_has_key,
+    json_is_empty_object,
+    json_is_json_null,
+    string_eq,
+)
 
 if TYPE_CHECKING:
     # This helps Mypy when sqlalchemy is not installed in the dev environment
     # but we are running in a mode that expects it.
-    from sqlalchemy.orm import DeclarativeBase
     from sqlalchemy.sql import Select
-
-T = TypeVar("T", bound="DeclarativeBase")
-
-
-def _check_sqlalchemy() -> None:
-    if not HAS_SQLALCHEMY:
-        raise ImportError(
-            "The 'sqlalchemy' extra is required to use the SQLAlchemy adapter. "
-            "Install it with: pip install 'fastapi-query-filters[sqlalchemy]'"
-        )
 
 
 class SQLAlchemyFilterAdapter(ORMFilterAdapter):
@@ -576,279 +554,6 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
             actual_type = args[0] if args else actual_type
 
         return actual_type
-
-
-if HAS_SQLALCHEMY:
-
-    class json_has_key(FunctionElement[bool]):
-        """Cross-dialect JSON key existence check."""
-
-        type = Boolean()
-        inherit_cache = True
-
-    @compiles(json_has_key, "postgresql")
-    def _compile_json_has_key_postgresql(
-        element: "json_has_key", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        key_sql = compiler.process(list(element.clauses)[1], **kw)
-        return f"(({column_sql})::jsonb ? {key_sql})"
-
-    @compiles(json_has_key, "mysql")
-    def _compile_json_has_key_mysql(
-        element: "json_has_key", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        key_sql = compiler.process(list(element.clauses)[1], **kw)
-        return f"JSON_CONTAINS_PATH({column_sql}, 'one', CONCAT('$.', JSON_QUOTE({key_sql}))) = 1"
-
-    @compiles(json_has_key, "sqlite")
-    def _compile_json_has_key_sqlite(
-        element: "json_has_key", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        key_sql = compiler.process(list(element.clauses)[1], **kw)
-        return (
-            f"EXISTS (SELECT 1 FROM json_each({column_sql}) "
-            f"WHERE json_each.key = {key_sql})"
-        )
-
-    class json_has_any_keys(FunctionElement[bool]):
-        """Cross-dialect JSON any-key existence check."""
-
-        type = Boolean()
-        inherit_cache = True
-
-    class json_has_all_keys(FunctionElement[bool]):
-        """Cross-dialect JSON all-keys existence check."""
-
-        type = Boolean()
-        inherit_cache = True
-
-    @compiles(json_has_any_keys, "postgresql")
-    def _compile_json_has_any_keys_postgresql(
-        element: "json_has_any_keys", compiler: Any, **kw: Any
-    ) -> str:
-        clauses = list(element.clauses)
-        column_sql = compiler.process(clauses[0], **kw)
-        keys_sql = ", ".join(compiler.process(c, **kw) for c in clauses[1:])
-        return f"(({column_sql})::jsonb ?| ARRAY[{keys_sql}])"
-
-    @compiles(json_has_all_keys, "postgresql")
-    def _compile_json_has_all_keys_postgresql(
-        element: "json_has_all_keys", compiler: Any, **kw: Any
-    ) -> str:
-        clauses = list(element.clauses)
-        column_sql = compiler.process(clauses[0], **kw)
-        keys_sql = ", ".join(compiler.process(c, **kw) for c in clauses[1:])
-        return f"(({column_sql})::jsonb ?& ARRAY[{keys_sql}])"
-
-    @compiles(json_has_any_keys, "mysql")
-    def _compile_json_has_any_keys_mysql(
-        element: "json_has_any_keys", compiler: Any, **kw: Any
-    ) -> str:
-        clauses = list(element.clauses)
-        column_sql = compiler.process(clauses[0], **kw)
-        paths_sql = ", ".join(
-            f"CONCAT('$.', JSON_QUOTE({compiler.process(c, **kw)}))"
-            for c in clauses[1:]
-        )
-        return f"JSON_CONTAINS_PATH({column_sql}, 'one', {paths_sql}) = 1"
-
-    @compiles(json_has_all_keys, "mysql")
-    def _compile_json_has_all_keys_mysql(
-        element: "json_has_all_keys", compiler: Any, **kw: Any
-    ) -> str:
-        clauses = list(element.clauses)
-        column_sql = compiler.process(clauses[0], **kw)
-        paths_sql = ", ".join(
-            f"CONCAT('$.', JSON_QUOTE({compiler.process(c, **kw)}))"
-            for c in clauses[1:]
-        )
-        return f"JSON_CONTAINS_PATH({column_sql}, 'all', {paths_sql}) = 1"
-
-    @compiles(json_has_any_keys, "sqlite")
-    def _compile_json_has_any_keys_sqlite(
-        element: "json_has_any_keys", compiler: Any, **kw: Any
-    ) -> str:
-        clauses = list(element.clauses)
-        column_sql = compiler.process(clauses[0], **kw)
-        keys_sql = ", ".join(compiler.process(c, **kw) for c in clauses[1:])
-        return (
-            f"EXISTS (SELECT 1 FROM json_each({column_sql}) "
-            f"WHERE json_each.key IN ({keys_sql}))"
-        )
-
-    @compiles(json_has_all_keys, "sqlite")
-    def _compile_json_has_all_keys_sqlite(
-        element: "json_has_all_keys", compiler: Any, **kw: Any
-    ) -> str:
-        clauses = list(element.clauses)
-        column_sql = compiler.process(clauses[0], **kw)
-        keys_sql = ", ".join(compiler.process(c, **kw) for c in clauses[1:])
-        expected_count = len(clauses) - 1
-        return (
-            f"(SELECT COUNT(DISTINCT json_each.key) FROM json_each({column_sql}) "
-            f"WHERE json_each.key IN ({keys_sql})) = {expected_count}"
-        )
-
-    class json_is_empty_object(FunctionElement[bool]):
-        """Cross-dialect check for empty JSON object {}."""
-
-        type = Boolean()
-        inherit_cache = True
-
-    class json_is_json_null(FunctionElement[bool]):
-        """Cross-dialect check for JSON null literal (different from SQL NULL)."""
-
-        type = Boolean()
-        inherit_cache = True
-
-    @compiles(json_is_empty_object, "postgresql")
-    def _compile_json_is_empty_object_postgresql(
-        element: "json_is_empty_object", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        return f"(({column_sql})::jsonb = '{{}}'::jsonb)"
-
-    @compiles(json_is_json_null, "postgresql")
-    def _compile_json_is_json_null_postgresql(
-        element: "json_is_json_null", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        return f"(({column_sql})::jsonb = 'null'::jsonb)"
-
-    @compiles(json_is_empty_object, "mysql")
-    def _compile_json_is_empty_object_mysql(
-        element: "json_is_empty_object", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        return f"(JSON_TYPE({column_sql}) = 'OBJECT' AND JSON_LENGTH({column_sql}) = 0)"
-
-    @compiles(json_is_json_null, "mysql")
-    def _compile_json_is_json_null_mysql(
-        element: "json_is_json_null", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        return f"(JSON_TYPE({column_sql}) = 'NULL')"
-
-    @compiles(json_is_empty_object, "sqlite")
-    def _compile_json_is_empty_object_sqlite(
-        element: "json_is_empty_object", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        return (
-            f"(json_type({column_sql}) = 'object' AND "
-            f"NOT EXISTS (SELECT 1 FROM json_each({column_sql})))"
-        )
-
-    @compiles(json_is_json_null, "sqlite")
-    def _compile_json_is_json_null_sqlite(
-        element: "json_is_json_null", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        return f"(json_type({column_sql}) = 'null')"
-
-    class string_eq(FunctionElement[bool]):
-        """Cross-dialect exact string equality."""
-
-        type = Boolean()
-        inherit_cache = True
-
-    @compiles(string_eq)
-    def _compile_string_eq_default(
-        element: "string_eq", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        value_sql = compiler.process(list(element.clauses)[1], **kw)
-        return f"({column_sql} = {value_sql})"
-
-    @compiles(string_eq, "mysql")
-    def _compile_string_eq_mysql(element: "string_eq", compiler: Any, **kw: Any) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        value_sql = compiler.process(list(element.clauses)[1], **kw)
-        return f"({column_sql} COLLATE utf8mb4_bin = {value_sql} COLLATE utf8mb4_bin)"
-
-    class array_contains(FunctionElement[bool]):
-        type = Boolean()
-        inherit_cache = True
-
-    class array_overlap(FunctionElement[bool]):
-        type = Boolean()
-        inherit_cache = True
-
-    class array_length(FunctionElement[int]):
-        type = Integer()
-        inherit_cache = True
-
-    @compiles(array_contains, "postgresql")
-    def _compile_array_contains_postgresql(
-        element: "array_contains", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        value_sql = compiler.process(list(element.clauses)[1], **kw)
-        return f"(({column_sql})::jsonb @> ({value_sql})::jsonb)"
-
-    @compiles(array_overlap, "postgresql")
-    def _compile_array_overlap_postgresql(
-        element: "array_overlap", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        value_sql = compiler.process(list(element.clauses)[1], **kw)
-        return f"EXISTS (SELECT 1 FROM jsonb_array_elements(({value_sql})::jsonb) v WHERE ({column_sql})::jsonb @> v)"
-
-    @compiles(array_length, "postgresql")
-    def _compile_array_length_postgresql(
-        element: "array_length", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        return f"jsonb_array_length(({column_sql})::jsonb)"
-
-    @compiles(array_contains, "sqlite")
-    def _compile_array_contains_sqlite(
-        element: "array_contains", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        value_sql = compiler.process(list(element.clauses)[1], **kw)
-        return f"EXISTS (SELECT 1 FROM json_each({column_sql}) WHERE json_each.value IN (SELECT value FROM json_each({value_sql})))"
-
-    @compiles(array_overlap, "sqlite")
-    def _compile_array_overlap_sqlite(
-        element: "array_overlap", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        value_sql = compiler.process(list(element.clauses)[1], **kw)
-        return f"EXISTS (SELECT 1 FROM json_each({column_sql}) WHERE json_each.value IN (SELECT value FROM json_each({value_sql})))"
-
-    @compiles(array_length, "sqlite")
-    def _compile_array_length_sqlite(
-        element: "array_length", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        return f"json_array_length({column_sql})"
-
-    @compiles(array_contains, "mysql")
-    def _compile_array_contains_mysql(
-        element: "array_contains", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        value_sql = compiler.process(list(element.clauses)[1], **kw)
-        return f"JSON_CONTAINS({column_sql}, {value_sql})"
-
-    @compiles(array_overlap, "mysql")
-    def _compile_array_overlap_mysql(
-        element: "array_overlap", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        value_sql = compiler.process(list(element.clauses)[1], **kw)
-        return f"JSON_OVERLAPS({column_sql}, {value_sql})"
-
-    @compiles(array_length, "mysql")
-    def _compile_array_length_mysql(
-        element: "array_length", compiler: Any, **kw: Any
-    ) -> str:
-        column_sql = compiler.process(list(element.clauses)[0], **kw)
-        return f"JSON_LENGTH({column_sql})"
 
 
 def apply_filters(
