@@ -47,6 +47,8 @@ class FilterConfig:
     max_depth: int = 1
     strict: bool = False
     extra_filters: type[BaseModel] | None = None
+    soft_delete_field: str | None = None
+    soft_delete_active_value: Any = None
 
 
 # --- Base Model for Generated Filters ---
