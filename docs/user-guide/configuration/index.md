@@ -28,6 +28,9 @@ class PostOut(BaseModel):
 | [`enable_sort`](sorting.md) | `bool` | `True` | Toggle dynamic sorting on/off |
 | [`max_depth`](depth.md) | `int` | `1` | Max depth for nested relationship filtering |
 | [`extra_filters`](extra-filters.md) | `type[BaseModel] | None` | `None` | Additional virtual filter fields |
+| [`soft_delete_field`](soft-delete.md) | `str | None` | `None` | Column name for automatic soft-delete filtering |
+| [`soft_delete_active_value`](soft-delete.md) | `Any` | `None` | Custom value for "active" records (auto-detected if `None`) |
+
 
 ---
 

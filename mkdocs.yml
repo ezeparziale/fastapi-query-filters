@@ -48,6 +48,7 @@ nav:
           - Sorting: user-guide/configuration/sorting.md
           - Depth: user-guide/configuration/depth.md
           - Extra Filters: user-guide/configuration/extra-filters.md
+          - Soft-Delete: user-guide/configuration/soft-delete.md
           - Per-field config: user-guide/configuration/json-schema-extra.md
       - Operators: user-guide/operators.md
   - Tutorials:
