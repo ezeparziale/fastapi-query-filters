@@ -3,7 +3,7 @@ from datetime import UTC, date, datetime, time
 
 from sqlalchemy.orm import Session
 
-from tests.models import Mission, Post, Team, User
+from tests.models import Mission, Post, StargateArtifact, Team, User
 
 
 def seed_db(db: Session) -> None:
@@ -13,6 +13,7 @@ def seed_db(db: Session) -> None:
     db.query(Post).delete()
     db.query(User).delete()
     db.query(Team).delete()
+    db.query(StargateArtifact).delete()
     db.commit()
 
     # Create Teams
@@ -204,4 +205,28 @@ def seed_db(db: Session) -> None:
         ),
     ]
     db.add_all(missions)
+    db.commit()
+
+    # Create Stargate Artifacts for soft delete tests
+    artifacts = [
+        StargateArtifact(
+            name="GDO",
+            origin_planet="Earth",
+            is_destroyed=False,
+            decommissioned_at=None,
+        ),
+        StargateArtifact(
+            name="Staff Weapon",
+            origin_planet="Chulak",
+            is_destroyed=True,
+            decommissioned_at=None,
+        ),
+        StargateArtifact(
+            name="Zat'nik'tel",
+            origin_planet="Abydos",
+            is_destroyed=False,
+            decommissioned_at=datetime(2000, 1, 1, 12, 0, tzinfo=UTC),
+        ),
+    ]
+    db.add_all(artifacts)
     db.commit()
