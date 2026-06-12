@@ -18,6 +18,7 @@ Dynamic and declarative query filters for FastAPI, powered by Pydantic v2 and re
 - 🌳 **Multi-level Relationships**: Filter through nested models at any depth
 - 📂 **JSON & Dictionary Support**: Query nested keys within JSON fields with automatic type casting
 - 🧩 **Array/List Support**: Filter `list[...]` fields with containment, overlap, and length operators
+- 🗑️ **Soft-Delete Support**: Automatically exclude logically deleted records from all queries
 - 🛡️ **Strict Mode**: Optional strict validation for unknown query parameters
 - 🧪 **Type Safe**: Full type hints and mypy strict mode support
 
@@ -270,6 +271,12 @@ class PostOut(BaseModel):
 
         # Optional: Pydantic model with virtual/extra filter fields
         extra_filters = PostFilterExtra
+
+        # Optional: column name for soft-delete filtering (default: None = disabled)
+        soft_delete_field = "deleted_at"  # or "is_deleted"
+
+        # Optional: explicit value that marks a record as active (default: None = auto-detected)
+        soft_delete_active_value = None
 ```
 
 ### FilterConfig Parameters Explained
@@ -284,6 +291,8 @@ class PostOut(BaseModel):
 - **strict**: Enable total strict mode to reject any query parameter not defined in the filter model (returns 422 error). In strict mode, this also applies to `sort_by` — any field not in `sort_columns` returns 422.
 - **sort_columns**: Explicit list of field names allowed as sort targets. When set, only listed fields can be used with `sort_by`. If `None`, all leaf fields from the schema are valid sort targets. In `strict` mode, passing an unlisted field returns a 422 error; otherwise it is silently ignored.
 - **extra_filters**: A Pydantic model containing additional filter fields from the database that are not included in the main schema output
+- **soft_delete_field**: Name of the database column used for soft-delete (e.g., `"deleted_at"` or `"is_deleted"`). When set, records where this field is non-null (for dates) or `True` (for booleans) are automatically excluded from all queries.
+- **soft_delete_active_value**: Optional explicit value that marks a record as *active*. If `None` (default), the type is auto-detected: boolean columns filter by `== False`, date/datetime columns filter by `IS NULL`.
 
 ## Advanced Features
 
@@ -471,6 +480,53 @@ class PostOut(BaseModel):
 GET /posts?author__age__gte=18
 GET /posts?status__eq=draft
 ```
+
+### Soft-Delete Support 🗑️
+
+Automatically exclude logically deleted records from every query by configuring `soft_delete_field` in `FilterConfig`. No manual `.where()` clause needed in every endpoint.
+
+The library auto-detects the column type:
+- **Boolean columns** (`is_deleted`, `is_destroyed`): filters by `col IS False`
+- **Date/Datetime columns** (`deleted_at`, `decommissioned_at`): filters by `col IS NULL`
+
+```python
+# Using a boolean flag (is_destroyed = True means deleted)
+class ArtifactOut(BaseModel):
+    id: int = Field(json_schema_extra={"filters": ["eq"]})
+    name: str = Field(json_schema_extra={"filters": ["eq", "icontains"]})
+    is_destroyed: bool = Field(json_schema_extra={"filters": ["eq"]})
+
+    class FilterConfig:
+        soft_delete_field = "is_destroyed"
+        # soft_delete_active_value is not needed — auto-detected as False for booleans
+
+# Using a timestamp (NULL = active, set = deleted)
+class PostOut(BaseModel):
+    id: int = Field(json_schema_extra={"filters": ["eq"]})
+    title: str = Field(json_schema_extra={"filters": ["eq", "icontains"]})
+    deleted_at: datetime | None = Field(None, json_schema_extra={"filters": ["isnull"]})
+
+    class FilterConfig:
+        soft_delete_field = "deleted_at"
+        # soft_delete_active_value is not needed — auto-detected as NULL for datetimes
+```
+
+```bash
+# Both endpoints automatically hide deleted/destroyed records:
+GET /artifacts   # Returns only items where is_destroyed IS False
+GET /posts       # Returns only items where deleted_at IS NULL
+```
+
+You can also supply a custom `soft_delete_active_value` for non-standard patterns:
+
+```python
+class FilterConfig:
+    soft_delete_field = "status"
+    soft_delete_active_value = "active"  # Only show records where status == 'active'
+```
+
+> [!TIP]
+> See a complete working example in [examples/soft_delete_app/](https://github.com/ezeparziale/fastapi-query-filters/tree/main/examples/soft_delete_app).
 
 ## Documentation
 

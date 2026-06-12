@@ -285,3 +285,42 @@ class MissionOut(BaseModel):
         extra_filters = ExtraInfo
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class StargateArtifactDestroyedOut(BaseModel):
+    id: int = Field(json_schema_extra={"filters": ["eq"]})
+    name: str = Field(json_schema_extra={"filters": ["eq", "icontains"]})
+    origin_planet: str = Field(json_schema_extra={"filters": ["eq"]})
+    is_destroyed: bool = Field(json_schema_extra={"filters": ["eq"]})
+
+    class FilterConfig:
+        soft_delete_field = "is_destroyed"
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class StargateArtifactDecommissionedOut(BaseModel):
+    id: int = Field(json_schema_extra={"filters": ["eq"]})
+    name: str = Field(json_schema_extra={"filters": ["eq", "icontains"]})
+    origin_planet: str = Field(json_schema_extra={"filters": ["eq"]})
+    decommissioned_at: datetime | None = Field(
+        None, json_schema_extra={"filters": ["isnull"]}
+    )
+
+    class FilterConfig:
+        soft_delete_field = "decommissioned_at"
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class StargateArtifactCustomActiveOut(BaseModel):
+    id: int = Field(json_schema_extra={"filters": ["eq"]})
+    name: str = Field(json_schema_extra={"filters": ["eq", "icontains"]})
+    origin_planet: str = Field(json_schema_extra={"filters": ["eq"]})
+    is_destroyed: bool = Field(json_schema_extra={"filters": ["eq"]})
+
+    class FilterConfig:
+        soft_delete_field = "is_destroyed"
+        soft_delete_active_value = True  # Custom: Only active if is_destroyed is True (for testing custom value)
+
+    model_config = ConfigDict(from_attributes=True)

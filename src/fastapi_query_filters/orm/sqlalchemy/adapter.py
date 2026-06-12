@@ -75,6 +75,20 @@ class SQLAlchemyFilterAdapter(ORMFilterAdapter):
             filter_model_class, "_source_filter_config", FilterConfig
         )
 
+        # --- Soft-Delete Handling ---
+        soft_delete_field = getattr(embedded_config, "soft_delete_field", None)
+        if soft_delete_field and hasattr(model, soft_delete_field):
+            col = getattr(model, soft_delete_field)
+            active_val = getattr(embedded_config, "soft_delete_active_value", None)
+            if active_val is not None:
+                stmt = stmt.where(col == active_val)
+            else:
+                # Intelligent type detection
+                if hasattr(col, "type") and isinstance(col.type, Boolean):
+                    stmt = stmt.where(col.is_(False))
+                else:
+                    stmt = stmt.where(col.is_(None))
+
         joined_paths: set[str] = set()
 
         # 1. Process Global Features (Search & Sort)

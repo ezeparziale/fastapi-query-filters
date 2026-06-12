@@ -90,3 +90,15 @@ class Mission(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     planet_name: Mapped[str] = mapped_column(String(100))
     mission_metadata: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+
+
+class StargateArtifact(Base):
+    __tablename__ = "stargate_artifacts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(100))
+    origin_planet: Mapped[str] = mapped_column(String(50))
+    is_destroyed: Mapped[bool] = mapped_column(Boolean, default=False)
+    decommissioned_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
